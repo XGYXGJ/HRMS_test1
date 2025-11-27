@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>新建薪酬标准</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="p-4">
+<h3>新建薪酬标准</h3>
+<form action="/hr/standard/save" method="post" class="w-50">
+    <div class="mb-3">
+        <label>标准名称</label>
+        <input type="text" name="standardName" class="form-control" placeholder="例: 2024年技术部初级薪资" required>
+    </div>
+    <div class="mb-3">
+        <label>适用职位ID (实验简化，请填数字)</label>
+        <input type="number" name="positionId" class="form-control" required>
+    </div>
+
+    <h5>薪酬项目设置</h5>
+    <div th:each="item : ${items}" class="mb-2 row">
+        <label class="col-sm-4 col-form-label" th:text="${item.itemName}"></label>
+        <div class="col-sm-8">
+            <!-- 这里的 name 写法对应 DTO 中的 Map<Integer, BigDecimal> items -->
+            <input type="number" step="0.01" th:name="'items[' + ${item.itemId} + ']'" class="form-control" placeholder="金额">
+        </div>
+    </div>
+
+    <button type="submit" class="btn btn-primary mt-3">提交审核</button>
+    <a href="/hr/dashboard" class="btn btn-secondary mt-3">返回</a>
+</form>
+</body>
+</html>

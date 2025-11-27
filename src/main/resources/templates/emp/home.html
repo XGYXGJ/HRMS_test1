@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>员工个人中心</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="p-4">
+<h2>我的工资单</h2>
+<div class="alert alert-info">此处仅显示已发放的工资记录。</div>
+
+<table class="table table-striped">
+    <thead>
+    <tr>
+        <th>发放明细ID</th>
+        <th>基本工资</th>
+        <th>绩效奖金</th>
+        <th>实发总额</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr th:each="row : ${salaryList}">
+        <td th:text="${row.detailId}"></td>
+        <td th:text="${row.baseSalary}"></td>
+        <td th:text="${row.kpiBonus}"></td>
+        <td th:text="${row.grossMoney}" class="fw-bold text-success"></td>
+    </tr>
+    </tbody>
+</table>
+<a href="/logout" class="btn btn-secondary">退出登录</a>
+</body>
+</html>
