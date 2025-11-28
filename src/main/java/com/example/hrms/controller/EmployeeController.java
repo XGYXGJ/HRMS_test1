@@ -1,6 +1,5 @@
 package com.example.hrms.controller;
 
-import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.example.hrms.entity.SalaryRegisterDetail;
 import com.example.hrms.entity.User;
 import com.example.hrms.mapper.SalaryRegisterDetailMapper;
@@ -23,11 +22,9 @@ public class EmployeeController {
     public String home(HttpSession session, Model model) {
         User user = (User) session.getAttribute("user");
 
-        // 查询属于该员工的所有工资明细
-        // 严谨做法：还应关联查询 Master 表，确保 Audit_Status = 'Approved'
-        List<SalaryRegisterDetail> salaryList = registerDetailMapper.selectList(
-                new QueryWrapper<SalaryRegisterDetail>().eq("User_ID", user.getUserId())
-        );
+        // 【修改点】: 这里不再使用 selectList，而是调用自定义方法
+        // 只查询关联 Master 表状态为 'Approved' 的记录
+        List<SalaryRegisterDetail> salaryList = registerDetailMapper.selectApprovedDetailsByUserId(user.getUserId());
 
         model.addAttribute("salaryList", salaryList);
         return "emp/home";

@@ -1,6 +1,7 @@
 package com.example.hrms.controller;
 
 import com.example.hrms.dto.SalaryStandardDTO;
+import com.example.hrms.entity.SalaryStandardDetail;
 import com.example.hrms.entity.User;
 import com.example.hrms.mapper.SalaryItemMapper;
 import com.example.hrms.service.SalaryService;
@@ -10,6 +11,10 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+
 @Controller
 @RequestMapping("/hr")
 public class HRController {
@@ -18,12 +23,15 @@ public class HRController {
     @Autowired private SalaryItemMapper itemMapper;
 
     @GetMapping("/dashboard")
-    public String dashboard() { return "hr/dashboard"; }
+    public String dashboard(HttpSession session, Model model) {
+        // 在仪表盘简单展示一些信息，或者直接返回视图
+        return "hr/dashboard";
+    }
 
     // 1. 制定薪酬标准页面
     @GetMapping("/standard/new")
     public String createStandardPage(Model model) {
-        model.addAttribute("items", itemMapper.selectList(null)); // 加载所有薪酬项目
+        model.addAttribute("items", itemMapper.selectList(null));
         return "hr/standard_add";
     }
 
@@ -32,14 +40,42 @@ public class HRController {
     public String saveStandard(SalaryStandardDTO dto, HttpSession session) {
         User hr = (User) session.getAttribute("user");
         salaryService.submitStandard(dto, hr.getUserId(), hr.getL3OrgId());
-        return "redirect:/hr/dashboard?msg=StandardSubmitted";
+        return "redirect:/hr/standard/list?msg=Submitted"; // 提交后跳转到列表页
     }
 
-    // 3. 一键登记本月工资
-    @PostMapping("/salary/register")
-    public String registerSalary(HttpSession session) {
+    // 【新增】3. 薪酬标准列表页
+    @GetMapping("/standard/list")
+    public String listStandards(HttpSession session, Model model) {
         User hr = (User) session.getAttribute("user");
-        salaryService.createMonthlyRegister(hr.getL3OrgId());
+        model.addAttribute("standards", salaryService.getStandardsByOrg(hr.getL3OrgId()));
+        return "hr/standard_list"; // 需要新建这个 HTML
+    }
+
+    // 【新增】4. 查看标准详情
+    @GetMapping("/standard/detail/{id}")
+    public String viewStandardDetail(@PathVariable Integer id, Model model) {
+        List<SalaryStandardDetail> details = salaryService.getStandardDetails(id);
+        model.addAttribute("details", details);
+
+        // 为了显示项目名称，我们可以查出所有Item传过去，或者在Service组装好VO
+        // 这里简单处理：传ItemMap给前端
+        Map<Integer, String> itemMap = itemMapper.selectList(null).stream()
+                .collect(Collectors.toMap(item -> item.getItemId(), item -> item.getItemName()));
+        model.addAttribute("itemMap", itemMap);
+
+        return "hr/standard_detail"; // 需要新建这个 HTML
+    }
+
+    // 5. 一键登记本月工资
+    @PostMapping("/salary/register")
+    public String registerSalary(HttpSession session, Model model) {
+        User hr = (User) session.getAttribute("user");
+        try {
+            salaryService.createMonthlyRegister(hr.getL3OrgId());
+        } catch (RuntimeException e) {
+            // 捕获重复登记的异常，返回错误信息
+            return "redirect:/hr/dashboard?error=" + e.getMessage();
+        }
         return "redirect:/hr/dashboard?msg=SalaryRegistered";
     }
 }
