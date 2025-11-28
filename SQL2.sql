@@ -35,6 +35,23 @@ CREATE TABLE T_Position (
                             Auth_Level ENUM('Admin','HR_Manager','Employee') NOT NULL COMMENT '权限级别'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- 下为修改后
+CREATE TABLE T_Position (
+                            Position_ID INT AUTO_INCREMENT PRIMARY KEY COMMENT '职位编号',
+                            Position_Name VARCHAR(50) NOT NULL COMMENT '职位名称',
+                            Auth_Level ENUM('Admin','Management','HR_Manager','Salary_Manager','Employee') NOT NULL COMMENT '权限级别'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- 初始化职位数据
+INSERT INTO T_Position (Position_Name, Auth_Level) VALUES
+                                                       ('系统管理员', 'Admin'),        -- Position_ID = 1
+                                                       ('管理部门', 'Management'),     -- Position_ID = 2
+                                                       ('人事经理', 'HR_Manager'),     -- Position_ID = 3
+                                                       ('薪酬经理', 'Salary_Manager'), -- Position_ID = 4
+                                                       ('普通员工', 'Employee');       -- Position_ID = 5
+
+-- 更新管理员账户的 Position_ID
+UPDATE T_User SET Position_ID = 1 WHERE Username = 'admin';
 
 -- ============================================================
 -- 3. 用户表 (T_User)
