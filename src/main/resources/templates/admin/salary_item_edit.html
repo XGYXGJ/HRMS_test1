@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>编辑薪酬项目</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+<nav class="navbar navbar-dark bg-dark px-3">
+    <a class="navbar-brand" href="/admin/dashboard">HR 管理系统 - 编辑薪酬项目</a>
+    <span class="text-white">欢迎，管理员</span>
+</nav>
+
+<div class="p-4 w-100">
+    <div class="card">
+        <div class="card-header">编辑项目: <span th:text="${item.itemName}"></span></div>
+        <div class="card-body">
+            <form th:action="@{/admin/salary/item/update}" method="post" th:object="${item}">
+                <input type="hidden" th:field="*{itemId}">
+
+                <div class="mb-3">
+                    <label for="itemName" class="form-label">项目名称</label>
+                    <input type="text" class="form-control" id="itemName" th:field="*{itemName}" required>
+                </div>
+
+                <div class="mb-3">
+                    <label for="itemType" class="form-label">项目类型</label>
+                    <select id="itemType" th:field="*{itemType}" class="form-select" required>
+                        <option value="Base">基本工资 (Base - 金额项)</option>
+                        <option value="Subsidy">补贴 (Subsidy - 金额项)</option>
+                        <option value="Bonus">奖金/其他加项 (Bonus - 金额项)</option>
+                        <option value="Penalty">罚款/扣款 (Penalty - 金额项)</option>
+                        <option value="Ratio">比例/系数项 (Ratio - 系数)</option>
+                    </select>
+                    <div class="form-text text-danger">
+                        * 比例项: 值设为系数(如 0.08, 扣款如社保可设为负值 -0.15)。
+                    </div>
+                </div>
+
+                <div class="d-flex justify-content-between">
+                    <button type="submit" class="btn btn-primary">保存修改</button>
+                    <a th:href="@{/admin/salary/item/list}" class="btn btn-secondary">返回列表</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+</body>
+</html>

@@ -92,6 +92,12 @@ CREATE TABLE T_Salary_Item (
                                Is_Active BOOLEAN DEFAULT 1 COMMENT '是否启用'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- 仅当 T_Salary_Item.Item_Type 是 ENUM 类型时执行
+ALTER TABLE T_Salary_Item
+    MODIFY COLUMN Item_Type ENUM('Base', 'Subsidy', 'Bonus', 'Penalty', 'KPI', 'Ratio') NOT NULL;
+-- 将所有 'KPI' 类型（如果您的本意是系数）更新为新的 'Ratio' 类型
+UPDATE T_Salary_Item SET Item_Type = 'Ratio' WHERE Item_Type = 'KPI';
+
 
 -- ============================================================
 -- 6. 薪酬标准主表 (T_Salary_Standard_Master)
