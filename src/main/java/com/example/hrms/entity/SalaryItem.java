@@ -12,5 +12,5 @@ public class SalaryItem {
     @TableId(type = IdType.AUTO)
     private Integer itemId;
     private String itemName;
-    private String itemType; // Base, Bonus, Subsidy
+    private String itemType; // 薪酬项目类型
 }

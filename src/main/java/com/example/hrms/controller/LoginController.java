@@ -24,9 +24,11 @@ public class LoginController {
         User user = authService.login(username, password);
         if (user != null) {
             session.setAttribute("user", user);
-            // 根据职位ID简单跳转 (假设 1:Admin, 2:HR, 3:Employee)
+            // 根据职位ID简单跳转
             if (user.getPositionId() == 1) return "redirect:/admin/dashboard";
-            if (user.getPositionId() == 2) return "redirect:/hr/dashboard";
+            if (user.getPositionId() == 2) return "redirect:/manage/dashboard";
+            if (user.getPositionId() == 3) return "redirect:/hr/dashboard";
+            if (user.getPositionId() == 4) return "redirect:/salary/dashboard";
             return "redirect:/emp/home";
         }
         model.addAttribute("error", "用户名或密码错误");

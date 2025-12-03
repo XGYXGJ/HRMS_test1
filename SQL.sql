@@ -15,3 +15,12 @@ INSERT INTO T_User (Username, Password_Hash, Position_ID, L3_Org_ID) VALUES ('em
 INSERT INTO T_Position (Position_ID, Position_Name, Auth_Level) VALUES (1, '管理员', 'Admin');
 INSERT INTO T_Position (Position_ID, Position_Name, Auth_Level) VALUES (2, '人事经理', 'HR_Manager');
 INSERT INTO T_Position (Position_ID, Position_Name, Auth_Level) VALUES (3, '软件工程师', 'Employee');
+
+-- 3. 上面的是老东西
+INSERT INTO T_Position (Position_ID, Position_Name, Auth_Level)
+VALUES
+    (1, '系统管理员', 'Admin'),        -- 对应原需求的管理员职位
+    (2, '管理部门', 'Management'),     -- 新增管理部门职位
+    (3, '人事经理', 'HR_Manager'),     -- 保留原人事经理职位
+    (4, '薪酬经理', 'Salary_Manager'), -- 新增薪酬经理职位
+    (5, '普通员工', 'Employee');
