@@ -122,6 +122,13 @@ CREATE TABLE T_Salary_Standard_Master (
                                           FOREIGN KEY (Position_ID) REFERENCES T_Position(Position_ID)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- 修改薪酬标准主表，增加标准编码字段
+ALTER TABLE T_Salary_Standard_Master
+    ADD COLUMN Standard_Code VARCHAR(50) NOT NULL COMMENT '标准编号(FAT+日期+序号)' AFTER Standard_ID;
+
+-- 确保编号唯一（可选）
+ALTER TABLE T_Salary_Standard_Master
+    ADD CONSTRAINT UK_Standard_Code UNIQUE (Standard_Code);
 
 -- ============================================================
 -- 7. 薪酬标准详情表 (T_Salary_Standard_Detail)

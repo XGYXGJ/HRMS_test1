@@ -1,0 +1,34 @@
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h4>
+            工资单明细
+            <small class="text-muted" th:text="'(月份: ' + ${master.payDate} + ')'"></small>
+        </h4>
+        <button onclick="loadContent('/salary/register/list')" class="btn btn-secondary">返回列表</button>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <table class="table table-bordered table-hover">
+                <thead class="table-light">
+                <tr>
+                    <th>员工ID</th>
+                    <th>姓名</th>
+                    <th>基本工资</th>
+                    <th>绩效奖金</th>
+                    <th>应发合计</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="d : ${details}">
+                    <td th:text="${d.userId}">101</td>
+                    <td th:text="${d.userName}">张三</td>
+                    <td th:text="${d.baseSalary}">5000</td>
+                    <td th:text="${d.kpiBonus}">500</td>
+                    <td th:text="${d.grossMoney}" class="fw-bold text-success">5500</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

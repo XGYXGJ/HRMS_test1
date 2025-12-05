@@ -26,26 +26,38 @@ public class SalaryService {
     @Autowired private UserMapper userMapper;
     @Autowired private SalaryItemMapper itemMapper;
 
-    // 1. 提交薪酬标准 (保持不变)
+    // 1. 提交薪酬标准 - 【已修复】
     @Transactional
     public void submitStandard(SalaryStandardDTO dto, Integer submitterId, Integer l3OrgId) {
         // 保存 Master
         SalaryStandardMaster master = new SalaryStandardMaster();
+
+        // 【关键修复点】从 DTO 获取 Standard_Code 并赋值
+        master.setStandardCode(dto.getStandardCode());
+
         master.setStandardName(dto.getStandardName());
         master.setL3OrgId(l3OrgId);
         master.setPositionId(dto.getPositionId());
         master.setSubmitterId(submitterId);
         master.setAuditStatus("Pending");
         master.setSubmissionTime(LocalDateTime.now());
+
+        // 插入主表
         standardMasterMapper.insert(master);
 
         // 保存 Details
         if (dto.getItems() != null) {
+            // master.getStandardId() 在 insert 后会被 Mybatis-Plus 回填
+            Integer standardId = master.getStandardId();
+
             for (Map.Entry<Integer, BigDecimal> entry : dto.getItems().entrySet()) {
+                // 确保值不为空
+                BigDecimal value = entry.getValue() != null ? entry.getValue() : BigDecimal.ZERO;
+
                 SalaryStandardDetail detail = new SalaryStandardDetail();
-                detail.setStandardId(master.getStandardId());
+                detail.setStandardId(standardId);
                 detail.setItemId(entry.getKey());
-                detail.setValue(entry.getValue());
+                detail.setValue(value);
                 standardDetailMapper.insert(detail);
             }
         }
@@ -60,7 +72,7 @@ public class SalaryService {
         }
     }
 
-    // 3. 【核心修改】一键登记本月工资
+    // 3. 一键登记本月工资 (保持不变)
     @Transactional
     public void createMonthlyRegister(Integer l3OrgId) {
         LocalDate now = LocalDate.now();

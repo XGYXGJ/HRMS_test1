@@ -1,0 +1,43 @@
+<div class="container-fluid">
+    <div class="d-flex justify-content-between mb-3 align-items-center">
+        <h3>薪资发放历史</h3>
+        <button onclick="loadContent('/salary/register/list')" class="btn btn-outline-secondary btn-sm">刷新</button>
+    </div>
+
+    <div th:if="${msg}" class="alert alert-success" th:text="${msg}"></div>
+    <div th:if="${error}" class="alert alert-danger" th:text="${error}"></div>
+
+    <div class="card shadow-sm">
+        <div class="card-body p-0">
+            <table class="table table-striped mb-0">
+                <thead class="table-dark">
+                <tr>
+                    <th>单号</th>
+                    <th>所属月份</th>
+                    <th>总人数</th>
+                    <th>发放总金额</th>
+                    <th>审核状态</th>
+                    <th>操作</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="reg : ${registers}">
+                    <td th:text="${reg.registerId}">1</td>
+                    <td th:text="${reg.payDate}">2023-10-01</td>
+                    <td th:text="${reg.totalPeople}">10</td>
+                    <td th:text="${reg.totalAmount}">150000.00</td>
+                    <td>
+                        <span th:if="${reg.auditStatus == 'Pending'}" class="badge bg-warning text-dark">待审核</span>
+                        <span th:if="${reg.auditStatus == 'Approved'}" class="badge bg-success">已发放</span>
+                        <span th:if="${reg.auditStatus == 'Rejected'}" class="badge bg-danger">已驳回</span>
+                    </td>
+                    <td>
+                        <button th:onclick="'loadContent(\'/salary/register/detail/' + ${reg.registerId} + '\')'"
+                                class="btn btn-sm btn-primary">查看明细</button>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

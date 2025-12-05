@@ -9,6 +9,6 @@ import java.util.Map;
 public class SalaryStandardDTO {
     private String standardName;
     private Integer positionId;
-    // Map<ItemId, Value>，例如 {1: 5000.00, 2: 200.00}
+    private String standardCode;
     private Map<Integer, BigDecimal> items;
 }

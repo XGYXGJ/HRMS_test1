@@ -1,32 +1,86 @@
-<!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
-<head>
-    <title>新建薪酬标准</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-</head>
-<body class="p-4">
-<h3>新建薪酬标准</h3>
-<form action="/hr/standard/save" method="post" class="w-50">
-    <div class="mb-3">
-        <label>标准名称</label>
-        <input type="text" name="standardName" class="form-control" placeholder="例: 2024年技术部初级薪资" required>
-    </div>
-    <div class="mb-3">
-        <label>适用职位ID (实验简化，请填数字)</label>
-        <input type="number" name="positionId" class="form-control" required>
-    </div>
+<div class="container-fluid">
+    <div class="card shadow-sm w-100 mx-auto">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0">新建薪酬标准</h5>
+        </div>
+        <div class="card-body bg-light">
+            <form action="/salary/standard/save" method="post">
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold">薪酬标准编号 <span class="text-danger">*</span></label>
+                        <input type="text" name="standardCode" class="form-control bg-white"
+                               th:value="${generatedCode}" readonly>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold">薪酬标准名称 <span class="text-danger">*</span></label>
+                        <input type="text" name="standardName" class="form-control"
+                               placeholder="例: 2025年第一季度技术部薪资方案" required>
+                    </div>
+                </div>
 
-    <h5>薪酬项目设置</h5>
-    <div th:each="item : ${items}" class="mb-2 row">
-        <label class="col-sm-4 col-form-label" th:text="${item.itemName}"></label>
-        <div class="col-sm-8">
-            <!-- 这里的 name 写法对应 DTO 中的 Map<Integer, BigDecimal> items -->
-            <input type="number" step="0.01" th:name="'items[' + ${item.itemId} + ']'" class="form-control" placeholder="金额">
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold">制定人 <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control"
+                               th:value="${currentUser.username}" disabled>
+                        <input type="hidden" name="submitterId" th:value="${currentUser.userId}">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold">登记时间</label>
+                        <input type="text" class="form-control"
+                               th:value="${#temporals.format(currentTime, 'yyyy-MM-dd HH:mm')}" disabled>
+                    </div>
+                </div>
+
+                <div class="row mb-4">
+                    <div class="col-md-12">
+                        <label class="form-label fw-bold">适用职位 <span class="text-danger">*</span></label>
+                        <select name="positionId" class="form-select" required>
+                            <option value="" selected disabled>请选择适用该标准的职位...</option>
+                            <option th:each="pos : ${positions}"
+                                    th:value="${pos.positionId}"
+                                    th:text="${pos.positionName}">软件工程师</option>
+                        </select>
+                        <div class="form-text">提示：此标准将应用于本部门下该职位的所有员工。</div>
+                    </div>
+                </div>
+
+                <hr>
+
+                <h6 class="mb-3 fw-bold">选择并配置薪酬项目</h6>
+                <div class="alert alert-info py-2 small">
+                    <i class="bi bi-info-circle"></i> 勾选项目以启用输入框。未勾选的项目金额将默认为 0。
+                </div>
+
+                <div class="row g-3">
+                    <div th:each="item : ${items}" class="col-md-6">
+                        <div class="card h-100 border-0 shadow-sm">
+                            <div class="card-body">
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input item-checkbox" type="checkbox"
+                                           th:id="'check_' + ${item.itemId}"> <label class="form-check-label fw-bold"
+                                                                                     th:for="'check_' + ${item.itemId}"
+                                                                                     th:text="${item.itemName}">基本工资</label>
+                                </div>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-white">¥</span>
+                                    <input type="number" step="0.01"
+                                           th:id="'input_' + ${item.itemId}"
+                                           th:name="'items[' + ${item.itemId} + ']'"
+                                           class="form-control"
+                                           placeholder="0.00" disabled>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="d-flex justify-content-end mt-4">
+                    <button type="button" onclick="loadContent('/salary/dashboard/home')" class="btn btn-secondary me-2">取消</button>
+                    <button type="reset" onclick="setTimeout(resetAllInputs, 10)" class="btn btn-warning text-white me-2">重置</button>
+                    <button type="submit" class="btn btn-primary px-4">提交审核</button>
+                </div>
+            </form>
         </div>
     </div>
-
-    <button type="submit" class="btn btn-primary mt-3">提交审核</button>
-    <a href="/hr/dashboard" class="btn btn-secondary mt-3">返回</a>
-</form>
-</body>
-</html>
+</div>

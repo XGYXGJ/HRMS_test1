@@ -1,0 +1,24 @@
+<div class="container-fluid">
+    <div class="card shadow-sm">
+        <div class="card-header bg-white d-flex justify-content-between align-items-center py-3">
+            <h4 class="mb-0 text-primary">薪酬标准详情</h4>
+            <button onclick="loadContent('/salary/standard/list')" class="btn btn-secondary">返回列表</button>
+        </div>
+        <div class="card-body">
+            <table class="table table-bordered">
+                <thead class="table-light">
+                <tr>
+                    <th>项目名称</th>
+                    <th>设定值 (金额/系数)</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="detail : ${details}">
+                    <td th:text="${itemMap[detail.itemId]}">基本工资</td>
+                    <td th:text="${detail.value}" class="fw-bold">5000.00</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

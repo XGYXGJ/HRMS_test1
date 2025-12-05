@@ -1,10 +1,228 @@
 <!DOCTYPE html>
-<html lang="en">
+<html xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
     <title>薪酬经理工作台</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .sidebar {
+            width: 250px;
+            min-height: 90vh;
+            background-color: #f8f9fa;
+            border-right: 1px solid #dee2e6;
+            position: fixed;
+            top: 56px; /* Height of navbar */
+            bottom: 0;
+            overflow-y: auto;
+        }
+        .main-content {
+            margin-left: 250px;
+            width: calc(100% - 250px);
+            padding: 20px;
+            margin-top: 56px;
+        }
+        .navbar {
+            z-index: 1030;
+            position: fixed;
+            width: 100%;
+            top: 0;
+        }
+        .loading-spinner {
+            display: none;
+            text-align: center;
+            padding: 50px;
+        }
+        .sidebar .list-group-item {
+            cursor: pointer;
+        }
+    </style>
 </head>
 <body>
+<nav class="navbar navbar-dark bg-dark px-3">
+    <a class="navbar-brand" href="javascript:void(0)" onclick="loadContent('/salary/dashboard/home', this)">HR 系统 - 薪酬经理</a>
+    <span class="text-white">欢迎，<span th:text="${session.user.username}">User</span></span>
+    <a href="/logout" class="btn btn-sm btn-outline-light ms-3">退出</a>
+</nav>
 
+<div class="d-flex">
+    <div class="sidebar">
+        <div class="list-group list-group-flush" id="sidebarMenu">
+            <a class="list-group-item list-group-item-action active" onclick="loadContent('/salary/dashboard/home', this)">
+                <i class="bi bi-speedometer2"></i> 仪表盘
+            </a>
+            <a class="list-group-item list-group-item-action" onclick="loadContent('/salary/standard/list', this)">
+                <i class="bi bi-card-list"></i> 薪酬标准管理
+            </a>
+            <a class="list-group-item list-group-item-action" onclick="loadContent('/salary/register/list', this)">
+                <i class="bi bi-currency-yen"></i> 薪资发放查询
+            </a>
+            <a class="list-group-item list-group-item-action" onclick="loadContent('/salary/standard/new', this)">
+                <i class="bi bi-plus-circle"></i> 新建薪酬标准
+            </a>
+        </div>
+    </div>
+
+    <div class="main-content">
+        <div id="loading" class="loading-spinner">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">加载中...</span>
+            </div>
+            <p class="mt-2">正在处理，请稍候...</p>
+        </div>
+
+        <div id="content-area">
+        </div>
+    </div>
+</div>
+
+<script>
+    /**
+     * 切换输入框的可用状态
+     * @param itemId 薪酬项目ID
+     */
+    function toggleInput(itemId) {
+        // 确保能找到复选框和输入框的元素ID
+        const checkbox = document.getElementById('check_' + itemId);
+        const input = document.getElementById('input_' + itemId);
+
+        if (checkbox && input) {
+            if (checkbox.checked) {
+                // 如果被勾选，移除 disabled 属性
+                input.disabled = false;
+                input.focus();
+            } else {
+                // 如果取消勾选，添加 disabled 属性，并清空值
+                input.disabled = true;
+                input.value = '';
+            }
+        } else {
+            // 如果找不到元素，请在浏览器控制台检查元素ID是否匹配
+            console.error("找不到 ID 对应的元素: check_" + itemId + " 或 input_" + itemId);
+        }
+    }
+
+    /**
+     * 重置表单时，禁用所有输入框
+     */
+    function resetAllInputs() {
+        const inputs = document.querySelectorAll('input[type="number"]');
+        inputs.forEach(input => {
+            input.disabled = true;
+            input.value = '';
+        });
+    }
+
+    // --- 【原 dashboard.html 代码】 ---
+
+    // 初始化：默认加载仪表盘首页
+    document.addEventListener('DOMContentLoaded', function() {
+        loadContent('/salary/dashboard/home', document.querySelector('#sidebarMenu a.active'));
+    });
+
+    /**
+     * 加载内容的主函数
+     * @param url 请求地址
+     * @param element 触发点击的侧边栏元素（可选，用于更新高亮）
+     */
+    function loadContent(url, element) {
+        // 1. 更新侧边栏高亮
+        if (element && element.classList.contains('list-group-item')) {
+            document.querySelectorAll('#sidebarMenu .list-group-item').forEach(item => item.classList.remove('active'));
+            element.classList.add('active');
+        }
+
+        // 2. 显示加载中
+        const contentArea = document.getElementById('content-area');
+        const loading = document.getElementById('loading');
+
+        contentArea.style.opacity = '0.5';
+        loading.style.display = 'block';
+
+        // 3. Fetch 请求
+        fetch(url)
+            .then(response => {
+                if (!response.ok) throw new Error("网络响应异常");
+                return response.text();
+            })
+            .then(html => {
+                // 4. 渲染 HTML
+                contentArea.innerHTML = html;
+                contentArea.style.opacity = '1';
+                loading.style.display = 'none';
+
+                // 5. 重新绑定新内容中的 Form 提交事件
+                bindFormEvents();
+
+                // 在内容加载后立即绑定复选框事件
+                bindItemCheckboxEvents();
+            })
+            .catch(err => {
+                contentArea.innerHTML = `<div class="alert alert-danger">加载失败: ${err.message}</div>`;
+                loading.style.display = 'none';
+                contentArea.style.opacity = '1';
+            });
+    }
+
+    /**
+     * 拦截动态加载内容中的 Form 提交
+     * 将其转换为 AJAX 请求
+     */
+    function bindFormEvents() {
+        const forms = document.querySelectorAll('#content-area form');
+        forms.forEach(form => {
+            form.onsubmit = function(event) {
+                event.preventDefault(); // 阻止默认跳转
+
+                // 如果有 confirm 属性，先确认
+                if (form.getAttribute('onsubmit_confirm')) {
+                    if (!confirm(form.getAttribute('onsubmit_confirm'))) return;
+                }
+
+                // 收集表单数据
+                const formData = new FormData(form);
+                const action = form.getAttribute('action');
+                const method = form.getAttribute('method') || 'POST';
+
+                // 显示加载
+                const contentArea = document.getElementById('content-area');
+                const loading = document.getElementById('loading');
+                loading.style.display = 'block';
+                contentArea.style.opacity = '0.5';
+
+                fetch(action, {
+                    method: method,
+                    body: formData
+                })
+                    .then(response => response.text())
+                    .then(html => {
+                        contentArea.innerHTML = html;
+                        loading.style.display = 'none';
+                        contentArea.style.opacity = '1';
+                        bindFormEvents(); // 递归绑定，以防返回的页面里还有表单
+                        bindItemCheckboxEvents(); // ✨ 新增：确保表单提交后返回的新页面（如果有）也能绑定事件
+                    })
+                    .catch(err => {
+                        alert("提交失败: " + err.message);
+                        loading.style.display = 'none';
+                        contentArea.style.opacity = '1';
+                    });
+            };
+        });
+    }
+
+    function bindItemCheckboxEvents() {
+        const checkboxes = document.querySelectorAll('.item-checkbox');
+        checkboxes.forEach(checkbox => {
+            // 确保不会重复绑定，先移除可能存在的 onchange 属性（如果 standard_add.html 中没移除的话）
+            checkbox.removeAttribute('onchange');
+
+            checkbox.addEventListener('change', function () {
+                const itemId = this.id.replace('check_', '');
+                toggleInput(itemId);
+            });
+        });
+    }
+
+</script>
 </body>
 </html>
