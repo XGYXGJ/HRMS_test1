@@ -11,7 +11,7 @@
             background-color: #f8f9fa;
             border-right: 1px solid #dee2e6;
             position: fixed;
-            top: 56px; /* Height of navbar */
+            top: 56px;
             bottom: 0;
             overflow-y: auto;
         }
@@ -169,9 +169,10 @@
      */
     function bindFormEvents() {
         const forms = document.querySelectorAll('#content-area form');
+
         forms.forEach(form => {
             form.onsubmit = function(event) {
-                event.preventDefault(); // 阻止默认跳转
+                event.preventDefault(); // 阻止默认提交
 
                 // 如果有 confirm 属性，先确认
                 if (form.getAttribute('onsubmit_confirm')) {
@@ -180,8 +181,8 @@
 
                 // 收集表单数据
                 const formData = new FormData(form);
-                const action = form.getAttribute('action');
-                const method = form.getAttribute('method') || 'POST';
+                let action = form.getAttribute('action');
+                const method = (form.getAttribute('method') || 'POST').toUpperCase();
 
                 // 显示加载
                 const contentArea = document.getElementById('content-area');
@@ -189,17 +190,34 @@
                 loading.style.display = 'block';
                 contentArea.style.opacity = '0.5';
 
-                fetch(action, {
-                    method: method,
-                    body: formData
-                })
-                    .then(response => response.text())
+                // -------- GET 请求特殊处理（不能带 body） --------
+                let fetchOptions = { method: method };
+                let requestUrl = action;
+
+                if (method === 'GET') {
+                    // 将 formData 转为 query 参数
+                    const params = new URLSearchParams(formData).toString();
+                    requestUrl = action + "?" + params;
+                } else {
+                    // POST/PUT/DELETE 可以正常带 body
+                    fetchOptions.body = formData;
+                }
+
+                // -------- 发起请求 --------
+                fetch(requestUrl, fetchOptions)
+                    .then(response => {
+                        if (!response.ok) throw new Error("网络请求失败");
+                        return response.text();
+                    })
                     .then(html => {
+                        // 更新页面
                         contentArea.innerHTML = html;
                         loading.style.display = 'none';
                         contentArea.style.opacity = '1';
-                        bindFormEvents(); // 递归绑定，以防返回的页面里还有表单
-                        bindItemCheckboxEvents(); // ✨ 新增：确保表单提交后返回的新页面（如果有）也能绑定事件
+
+                        // 递归绑定新内容中的表单事件 & Checkbox 事件
+                        bindFormEvents();
+                        bindItemCheckboxEvents();
                     })
                     .catch(err => {
                         alert("提交失败: " + err.message);

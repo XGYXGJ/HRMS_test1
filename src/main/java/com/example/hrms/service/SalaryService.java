@@ -157,7 +157,7 @@ public class SalaryService {
             SalaryRegisterDetail regDetail = new SalaryRegisterDetail();
             regDetail.setRegisterId(regMaster.getRegisterId());
             regDetail.setUserId(emp.getUserId());
-            regDetail.setUserName(emp.getUsername());
+            //regDetail.setUserName(emp.getUsername());
             regDetail.setBaseSalary(baseSalary);
             regDetail.setKpiBonus(BigDecimal.ZERO);
             regDetail.setGrossMoney(grossMoney);

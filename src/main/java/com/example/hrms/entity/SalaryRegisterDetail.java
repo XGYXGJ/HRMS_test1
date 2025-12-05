@@ -15,7 +15,6 @@ public class SalaryRegisterDetail {
     private Integer detailId;
     private Integer registerId;
     private Integer userId;
-    private String userName; // 冗余字段方便显示
     private BigDecimal baseSalary;
     private BigDecimal kpiBonus;
     private BigDecimal grossMoney;

@@ -6,14 +6,51 @@
 
     <div th:if="${msg}" class="alert alert-success" th:text="${msg}"></div>
 
+    <div class="card shadow-sm mb-3">
+        <div class="card-body">
+            <form action="/salary/standard/list" method="get" onsubmit="handleFormSubmit(event)">
+                <div class="row g-3 align-items-end">
+                    <div class="col-md-4">
+                        <label class="form-label">薪酬标准编号</label>
+                        <input type="text" name="standardCode" class="form-control form-control-sm"
+                               placeholder="请输入编号" th:value="${standardCode}">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">适用职位名称</label>
+                        <input type="text" name="positionName" class="form-control form-control-sm"
+                               placeholder="请输入职位名称" th:value="${positionName}">
+                    </div>
+                    <div class="col-md-4">
+                        <button type="submit" class="btn btn-primary btn-sm me-2">查询</button>
+                        <button type="button" onclick="loadContent('/salary/standard/list')" class="btn btn-secondary btn-sm">重置</button>
+                    </div>
+                </div>
+            </form>
+            <script>
+                // 此函数确保表单查询是通过 AJAX 加载到 contentArea 中，而不是刷新整个页面
+                function handleFormSubmit(event) {
+                    event.preventDefault();
+
+                    const form = event.target;
+                    const formData = new FormData(form);
+                    const queryParams = new URLSearchParams(formData).toString();
+
+                    // 构建新的 URL 并使用 loadContent 进行 AJAX 加载
+                    loadContent(form.action + '?' + queryParams);
+                }
+            </script>
+        </div>
+    </div>
+
+
     <div class="card shadow-sm">
         <div class="card-body p-0">
             <table class="table table-striped table-hover mb-0">
                 <thead class="table-light">
                 <tr>
-                    <th>ID</th>
+                    <th>薪酬标准编号</th>
                     <th>标准名称</th>
-                    <th>适用职位ID</th>
+                    <th>适用职位</th>
                     <th>提交时间</th>
                     <th>审核状态</th>
                     <th>操作</th>
@@ -21,9 +58,8 @@
                 </thead>
                 <tbody>
                 <tr th:each="std : ${standards}">
-                    <td th:text="${std.standardId}">1</td>
-                    <td th:text="${std.standardName}">技术部初级方案</td>
-                    <td th:text="${std.positionId}">6</td>
+                    <td th:text="${std.standardCode}">FAT2023100101</td> <td th:text="${std.standardName}">技术部初级方案</td>
+                    <td th:text="${positionNameMap.get(std.positionId)}">软件工程师</td>
                     <td th:text="${#temporals.format(std.submissionTime, 'yyyy-MM-dd HH:mm')}">2023-10-01</td>
                     <td>
                         <span th:if="${std.auditStatus == 'Pending'}" class="badge bg-warning text-dark">待审核</span>
@@ -31,8 +67,10 @@
                         <span th:if="${std.auditStatus == 'Rejected'}" class="badge bg-danger">已驳回</span>
                     </td>
                     <td>
-                        <button th:onclick="'loadContent(\'/salary/standard/detail/' + ${std.standardId} + '\')'"
-                                class="btn btn-sm btn-info text-white">详情</button>
+                        <button class="btn btn-sm btn-info text-white"
+                                th:onclick="'loadContent(\'/salary/standard/detail/' + ${std.standardId} + '\')'">
+                            详情
+                        </button>
                     </td>
                 </tr>
                 </tbody>
