@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
+<html xmlns:th="http://www.thymeleaf.org" lang="zh">
 <head>
     <meta charset="UTF-8">
     <title>管理员后台</title>
@@ -7,26 +7,67 @@
 </head>
 <body>
 <nav class="navbar navbar-dark bg-dark px-3">
-    <a class="navbar-brand" href="#">HR 管理系统</a>
+    <a class="navbar-brand" href="/admin/dashboard">HR 管理系统</a>
     <span class="text-white">欢迎，管理员</span>
 </nav>
 
 <div class="d-flex">
+    <!-- 完整的侧边栏，直接嵌入页面 -->
     <div class="bg-light border-end" style="width: 250px; min-height: 90vh;">
         <div class="list-group list-group-flush">
-            <a href="/admin/org/add" class="list-group-item list-group-item-action">添加机构</a>
-            <a href="/admin/files" class="list-group-item list-group-item-action">人力资源档案查询</a>
+            <a href="/admin/dashboard" class="list-group-item list-group-item-action active">系统概览</a>
+            <a href="/admin/personnel" class="list-group-item list-group-item-action">人事档案管理</a>
+            <a href="/admin/positions" class="list-group-item list-group-item-action">职位管理</a> <!-- 【新增的功能入口】 -->
+            <a href="/admin/org/add" class="list-group-item list-group-item-action">机构管理</a>
             <a href="/admin/salary/item/list" class="list-group-item list-group-item-action">薪酬项目管理</a>
-            <a href="#" class="list-group-item list-group-item-action">分配人事经理(开发中)</a>
             <a href="/admin/audit/standards" class="list-group-item list-group-item-action">薪酬标准审核</a>
             <a href="/admin/audit/registers" class="list-group-item list-group-item-action">工资发放审核</a>
+            <a href="/logout" class="list-group-item list-group-item-action text-danger">退出登录</a>
         </div>
     </div>
 
+    <!-- 主内容区域 -->
     <div class="p-4 w-100">
         <h3>系统概览</h3>
-        <div class="alert alert-info">请从左侧菜单选择功能。</div>
+        <div class="alert alert-info">
+            <h4 class="alert-heading">欢迎回来！</h4>
+            <p>请从左侧的导航菜单中选择您需要操作的功能模块。</p>
+            <hr>
+            <p class="mb-0">您当前拥有系统最高权限，请谨慎操作。</p>
+        </div>
+
+        <div class="row mt-4">
+            <div class="col-md-4">
+                <div class="card text-center mb-3">
+                    <div class="card-body">
+                        <h5 class="card-title">人事档案</h5>
+                        <p class="card-text">管理、查询和编辑所有员工的档案信息。</p>
+                        <a href="/admin/personnel" class="btn btn-primary">进入档案管理</a>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card text-center mb-3">
+                    <div class="card-body">
+                        <h5 class="card-title">职位管理</h5>
+                        <p class="card-text">查看系统中所有职位及其在职人员情况。</p>
+                        <a href="/admin/positions" class="btn btn-primary">进入职位管理</a>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card text-center mb-3">
+                    <div class="card-body">
+                        <h5 class="card-title">薪酬审核</h5>
+                        <p class="card-text">审核由薪酬经理提交的薪酬标准和工资单。</p>
+                        <a href="/admin/audit/standards" class="btn btn-primary">进入审核中心</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
     </div>
 </div>
+
 </body>
 </html>

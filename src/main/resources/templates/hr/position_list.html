@@ -13,9 +13,9 @@
     <div th:if="${param.success}" class="alert alert-success">职位创建成功！</div>
     <div th:if="${error}" class="alert alert-danger" th:text="${error}"></div>
 
-    <!-- 新建职位表单 -->
+    <!-- 新建职位表单 (保持不变) -->
     <div class="card mb-4">
-        <div class.card-header><h4>新建职位</h4></div>
+        <div class="card-header"><h4>新建职位</h4></div>
         <div class="card-body">
             <form th:action="@{/hr/positions/save}" method="post" th:object="${newPosition}">
                 <div class="mb-3">
@@ -27,13 +27,14 @@
         </div>
     </div>
 
-    <!-- 职位列表 -->
+    <!-- 职位列表 (已修改) -->
     <h4>现有职位列表</h4>
     <table class="table table-striped">
         <thead>
         <tr>
             <th>职位ID</th>
             <th>职位名称</th>
+            <th>在职人数</th> <!-- 新增表头 -->
             <th>操作</th>
         </tr>
         </thead>
@@ -41,6 +42,12 @@
         <tr th:each="pos : ${positions}">
             <td th:text="${pos.positionId}"></td>
             <td th:text="${pos.positionName}"></td>
+            <!-- 新增单元格，用于显示人数和链接 -->
+            <td>
+                <a th:href="@{/hr/positions/{id}/employees(id=${pos.positionId})}" class="btn btn-link p-0">
+                    <span th:text="${employeeCounts.getOrDefault(pos.positionId, 0L)}">0</span>
+                </a>
+            </td>
             <td>
                 <a th:href="@{/hr/positions/delete/{id}(id=${pos.positionId})}"
                    class="btn btn-danger btn-sm"
@@ -48,7 +55,7 @@
             </td>
         </tr>
         <tr th:if="${#lists.isEmpty(positions)}">
-            <td colspan="3" class="text-center text-muted">暂无自定义职位，请在上方添加。</td>
+            <td colspan="4" class="text-center text-muted">暂无自定义职位，请在上方添加。</td>
         </tr>
         </tbody>
     </table>
