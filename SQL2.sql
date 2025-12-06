@@ -130,6 +130,8 @@ ALTER TABLE T_Salary_Standard_Master
 ALTER TABLE T_Salary_Standard_Master
     ADD CONSTRAINT UK_Standard_Code UNIQUE (Standard_Code);
 
+ALTER TABLE T_Salary_Register_Master
+    ADD COLUMN Register_Code VARCHAR(30) UNIQUE COMMENT '薪资发放单号 (格式: PAYYYYYMMDDNN)';
 -- ============================================================
 -- 7. 薪酬标准详情表 (T_Salary_Standard_Detail)
 -- ============================================================

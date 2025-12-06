@@ -1,0 +1,56 @@
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h4>审核工资单 <small class="text-muted" th:text="'#' + ${master.registerId}"></small></h4>
+        <button onclick="loadContent('/manage/audit/list')" class="btn btn-secondary">返回列表</button>
+    </div>
+
+    <div class="card mb-3 border-primary">
+        <div class="card-body d-flex justify-content-between align-items-center bg-light">
+            <div>
+                <strong>当前操作：</strong> 请仔细核对下方明细，确认无误后进行发放。
+            </div>
+            <div>
+                <form action="/manage/audit/process" method="post" style="display:inline;" onsubmit_confirm="确定要驳回此工资单吗？薪酬经理需要重新生成。">
+                    <input type="hidden" name="registerId" th:value="${master.registerId}">
+                    <input type="hidden" name="action" value="reject">
+                    <button type="submit" class="btn btn-danger me-2">
+                        <i class="bi bi-x-circle"></i> 驳回申请
+                    </button>
+                </form>
+
+                <form action="/manage/audit/process" method="post" style="display:inline;" onsubmit_confirm="确定要通过审核并正式发放工资吗？">
+                    <input type="hidden" name="registerId" th:value="${master.registerId}">
+                    <input type="hidden" name="action" value="pass">
+                    <button type="submit" class="btn btn-success">
+                        <i class="bi bi-check-circle"></i> 通过并发放
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-body p-0">
+            <table class="table table-bordered mb-0 small">
+                <thead class="table-light">
+                <tr>
+                    <th>姓名</th>
+                    <th>职位</th>
+                    <th th:each="item : ${allItems}" th:text="${item.itemName}"></th>
+                    <th>实发</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="emp : ${finalDetails}">
+                    <td th:text="${emp.userName}"></td>
+                    <td th:text="${emp.positionName}"></td>
+                    <td th:each="item : ${allItems}">
+                        <span th:text="${emp.itemValues.get(item.itemId)}"></span>
+                    </td>
+                    <td class="fw-bold" th:text="${emp.grossMoney}"></td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

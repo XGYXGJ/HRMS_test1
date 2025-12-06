@@ -1,0 +1,15 @@
+<div class="animate-fade-in">
+    <h3>管理工作台</h3>
+    <div class="row mt-4">
+        <div class="col-md-4">
+            <div class="card text-center shadow-sm h-100 border-primary">
+                <div class="card-body">
+                    <h5 class="card-title text-primary">待审核工资单</h5>
+                    <h2 class="display-4" th:text="${pendingCount}">0</h2>
+                    <p class="text-muted">当前等待您处理的工资发放申请</p>
+                    <button onclick="loadContent('/manage/audit/list')" class="btn btn-primary">去审核</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
