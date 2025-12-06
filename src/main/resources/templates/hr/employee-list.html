@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8">
+    <title>员工档案管理</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <link rel="stylesheet" href="/static/css/bootstrap.min.css">
+    <style>
+        body{padding:20px}
+        .actions{display:flex;gap:8px}
+    </style>
+</head>
+<body>
+<h2>员工档案管理</h2>
+<div class="mb-3">
+    <button id="btn-new" class="btn btn-primary">新增档案</button>
+    <button id="btn-bulk" class="btn btn-secondary">批量生成档案号/账号</button>
+    <input id="search" placeholder="按姓名/工号搜索" class="form-control d-inline-block" style="width:300px;margin-left:8px" />
+</div>
+
+<table class="table table-striped" id="emp-table">
+    <thead>
+    <tr>
+        <th>档案号</th>
+        <th>姓名</th>
+        <th>部门</th>
+        <th>职务</th>
+        <th>账号</th>
+        <th>状态</th>
+        <th>操作</th>
+    </tr>
+    </thead>
+    <tbody></tbody>
+</table>
+
+<!-- 分页 / 简单演示 -->
+<nav><ul class="pagination" id="pager"></ul></nav>
+
+<script src="/static/js/fetch-polyfill.js"></script>
+<script src="/static/js/hr-employee.js"></script>
+</body>
+</html>
