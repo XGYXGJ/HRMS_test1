@@ -1,3 +1,4 @@
+// src/main/java/com/example/hrms/entity/Position.java
 package com.example.hrms.entity;
 
 import com.baomidou.mybatisplus.annotation.IdType;
@@ -20,4 +21,8 @@ public class Position implements Serializable {
 
     @TableField("Auth_Level")
     private String authLevel;
+
+    // 新增字段
+    @TableField("L3_Org_ID")
+    private Integer l3OrgId;
 }

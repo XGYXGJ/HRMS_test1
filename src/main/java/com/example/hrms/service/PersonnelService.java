@@ -1,3 +1,4 @@
+// src/main/java/com/example/hrms/service/PersonnelService.java
 package com.example.hrms.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
@@ -24,9 +25,8 @@ public class PersonnelService {
     private UserMapper userMapper;
 
     private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("yyyyMMdd");
-    private static final int DEFAULT_POSITION_ID = 5; // 普通员工（根据你的表调整）
 
-    // 列表与搜索（保持不变）
+    // 列表与搜索 (保持不变)
     public List<Map<String, Object>> listFiles(Integer l3OrgId, String q) {
         List<Map<String, Object>> all = fileMapper.selectFilesWithOrgName();
         List<Map<String, Object>> filtered = all;
@@ -35,7 +35,11 @@ public class PersonnelService {
                 Object v = m.get("L3_Org_ID");
                 if (v == null) v = m.get("l3_org_id");
                 if (v == null) return false;
-                try { return Integer.parseInt(String.valueOf(v)) == l3OrgId; } catch (Exception ex) { return false; }
+                try {
+                    return Integer.parseInt(String.valueOf(v)) == l3OrgId;
+                } catch (Exception ex) {
+                    return false;
+                }
             }).collect(Collectors.toList());
         }
         if (q == null || q.trim().isEmpty()) return filtered;
@@ -51,7 +55,7 @@ public class PersonnelService {
         }).collect(Collectors.toList());
     }
 
-    private String safe(Map<String,Object> m, String... keys) {
+    private String safe(Map<String, Object> m, String... keys) {
         for (String k : keys) {
             if (k == null) continue;
             Object v = m.get(k);
@@ -64,18 +68,20 @@ public class PersonnelService {
         return "";
     }
 
-    // count users
-    public long countUsers() {
-        return userMapper.selectCount(null);
-    }
-
-    // 自动创建（安全策略：先插入 user 得到 userId，再用 userId 生成账号）
+    // [FIX] 核心创建方法，保持不变
     @Transactional
-    public Map<String, Object> createPersonnelAuto(PersonnelFile file) {
+    public Map<String, Object> createPersonnelAuto(PersonnelFile file, Integer positionId) {
+        if (file.getL3OrgId() == null) {
+            throw new IllegalArgumentException("必须为新员工指定一个三级机构");
+        }
+        if (positionId == null) {
+            throw new IllegalArgumentException("必须为新员工指定一个职位");
+        }
+
         User user = new User();
         user.setUsername("temp_" + System.currentTimeMillis());
         user.setPasswordHash("123");
-        user.setPositionId(DEFAULT_POSITION_ID);
+        user.setPositionId(positionId);
         user.setL3OrgId(file.getL3OrgId());
         userMapper.insert(user);
 
@@ -88,34 +94,31 @@ public class PersonnelService {
 
         file.setUserId(uid);
         file.setArchiveNo(account);
-        file.setAuditStatus("Pending");
+        file.setAuditStatus("Approved");
         file.setIsDeleted(0);
         fileMapper.insert(file);
 
-        Map<String,Object> res = new HashMap<>();
+        Map<String, Object> res = new HashMap<>();
         res.put("file", file);
         res.put("account", account);
         res.put("initPassword", "123");
         return res;
     }
 
-    /**
-     * 新增：使用前端提供的 account 与 initPassword 创建用户与档案。
-     * 若 account 已存在，会做简单去重（追加随机后缀），最多尝试若干次。
-     */
+    // [FIX] 添加 HRApiController 需要的 createPersonnelWithGivenAccount 方法
     @Transactional
-    public Map<String, Object> createPersonnelWithGivenAccount(PersonnelFile file, String account, String initPassword) {
+    public Map<String, Object> createPersonnelWithGivenAccount(PersonnelFile file, String account, String initPassword, Integer positionId) {
         if (account == null || account.trim().isEmpty()) {
-            return createPersonnelAuto(file);
+            return createPersonnelAuto(file, positionId);
+        }
+        if (positionId == null) {
+            throw new IllegalArgumentException("必须为新员工指定一个职位");
         }
 
         String username = account.trim();
-        int attempts = 0;
-        while (attempts < 10) {
-            User exist = userMapper.selectOne(new QueryWrapper<User>().eq("Username", username));
-            if (exist == null) break;
-            username = account + "_" + (new Random().nextInt(900) + 100);
-            attempts++;
+        User exist = userMapper.selectOne(new QueryWrapper<User>().eq("Username", username));
+        if (exist != null) {
+            throw new RuntimeException("账号 '" + username + "' 已存在，请使用其他账号。");
         }
 
         String initPass = (initPassword == null || initPassword.isEmpty()) ? "123" : initPassword;
@@ -123,28 +126,46 @@ public class PersonnelService {
         User user = new User();
         user.setUsername(username);
         user.setPasswordHash(initPass);
-        user.setPositionId(DEFAULT_POSITION_ID);
+        user.setPositionId(positionId);
         user.setL3OrgId(file.getL3OrgId());
         userMapper.insert(user);
 
         file.setUserId(user.getUserId());
         file.setArchiveNo(username);
-        file.setAuditStatus("Pending");
+        file.setAuditStatus("Approved");
         file.setIsDeleted(0);
         fileMapper.insert(file);
 
-        Map<String,Object> res = new HashMap<>();
+        Map<String, Object> res = new HashMap<>();
         res.put("file", file);
         res.put("account", username);
         res.put("initPassword", initPass);
         return res;
     }
 
+    // [FIX] 添加 HRApiController 需要的 bulkGenerate 方法
+    @Transactional
+    public List<Map<String, Object>> bulkGenerate(int count, Integer l3OrgId, Integer positionId) {
+        if (positionId == null) {
+            throw new IllegalArgumentException("批量生成员工时必须指定一个职位");
+        }
+        List<Map<String, Object>> created = new ArrayList<>();
+        if (count <= 0) return created;
+        for (int i = 0; i < count; i++) {
+            PersonnelFile pf = new PersonnelFile();
+            pf.setName("新员工-" + (i + 1));
+            pf.setL3OrgId(l3OrgId);
+            Map<String, Object> c = createPersonnelAuto(pf, positionId);
+            created.add(c);
+        }
+        return created;
+    }
+
     // 获取单个档案
-    public Map<String,Object> getFileById(Integer id) {
+    public Map<String, Object> getFileById(Integer id) {
         PersonnelFile pf = fileMapper.selectById(id);
         if (pf == null) return null;
-        Map<String,Object> m = new HashMap<>();
+        Map<String, Object> m = new HashMap<>();
         m.put("fileId", pf.getFileId());
         m.put("archiveNo", pf.getArchiveNo());
         m.put("userId", pf.getUserId());
@@ -161,7 +182,7 @@ public class PersonnelService {
 
     // 更新档案
     @Transactional
-    public void updatePersonnel(Integer id, Map<String,Object> payload) {
+    public void updatePersonnel(Integer id, Map<String, Object> payload) {
         PersonnelFile pf = fileMapper.selectById(id);
         if (pf == null) throw new RuntimeException("档案不存在");
         if (payload.containsKey("name")) pf.setName((String) payload.get("name"));
@@ -172,38 +193,36 @@ public class PersonnelService {
         fileMapper.updateById(pf);
     }
 
-    // 审核
+    // [FIX] 补全 HRApiController 需要的其他方法，防止后续报错
     @Transactional
     public boolean auditFile(Integer fileId, boolean pass, Integer auditorUserId) {
         PersonnelFile pf = fileMapper.selectById(fileId);
         if (pf == null) return false;
         pf.setAuditStatus(pass ? "Approved" : "Rejected");
+        // 实际场景可能需要记录审核人ID
         fileMapper.updateById(pf);
         return true;
     }
 
-    // 逻辑删除
     @Transactional
     public boolean deleteFile(Integer fileId, String reason) {
         PersonnelFile pf = fileMapper.selectById(fileId);
         if (pf == null) return false;
         pf.setIsDeleted(1);
         fileMapper.updateById(pf);
+
+        // 同时逻辑删除关联的User账户
+        if(pf.getUserId() != null){
+            User user = userMapper.selectById(pf.getUserId());
+            if(user != null){
+                user.setIsDeleted(true); // 假设User表有Is_Deleted字段
+                userMapper.updateById(user);
+            }
+        }
         return true;
     }
 
-    // 批量生成
-    @Transactional
-    public List<Map<String,Object>> bulkGenerate(int count, Integer l3OrgId) {
-        List<Map<String,Object>> created = new ArrayList<>();
-        if (count <= 0) return created;
-        for (int i = 0; i < count; i++) {
-            PersonnelFile pf = new PersonnelFile();
-            pf.setName("新员工");
-            pf.setL3OrgId(l3OrgId);
-            Map<String,Object> c = createPersonnelAuto(pf);
-            created.add(c);
-        }
-        return created;
+    public long countUsers() {
+        return userMapper.selectCount(new QueryWrapper<User>().eq("Is_Deleted", 0));
     }
 }

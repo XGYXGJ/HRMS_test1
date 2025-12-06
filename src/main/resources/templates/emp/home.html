@@ -1,3 +1,4 @@
+<!-- src/main/resources/templates/emp/home.html (修改) -->
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
 <head>
@@ -5,27 +6,60 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
 <body class="p-4">
-<h2>我的工资单</h2>
-<div class="alert alert-info">此处仅显示已发放的工资记录。</div>
+<div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>员工个人中心</h2>
+        <a href="/logout" class="btn btn-secondary">退出登录</a>
+    </div>
 
-<table class="table table-striped">
-    <thead>
-    <tr>
-        <th>发放明细ID</th>
-        <th>基本工资</th>
-        <th>绩效奖金</th>
-        <th>实发总额</th>
-    </tr>
-    </thead>
-    <tbody>
-    <tr th:each="row : ${salaryList}">
-        <td th:text="${row.detailId}"></td>
-        <td th:text="${row.baseSalary}"></td>
-        <td th:text="${row.kpiBonus}"></td>
-        <td th:text="${row.grossMoney}" class="fw-bold text-success"></td>
-    </tr>
-    </tbody>
-</table>
-<a href="/logout" class="btn btn-secondary">退出登录</a>
+    <!-- 个人资料卡片 -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h4>我的档案</h4>
+        </div>
+        <div class="card-body">
+            <div th:if="${profile}">
+                <p><strong>姓名:</strong> <span th:text="${profile.name}"></span></p>
+                <p><strong>性别:</strong> <span th:text="${profile.gender}"></span></p>
+                <p><strong>手机号:</strong> <span th:text="${profile.phoneNumber}"></span></p>
+                <p><strong>职位:</strong> <span th:text="${position != null ? position.positionName : '未分配'}"></span></p>
+            </div>
+            <div th:if="${profile == null}" class="alert alert-warning">
+                您的档案信息不完整，请联系人事部门。
+            </div>
+        </div>
+    </div>
+
+    <!-- 工资单表格 -->
+    <div class="card">
+        <div class="card-header">
+            <h4>我的工资单</h4>
+        </div>
+        <div class="card-body">
+            <div class="alert alert-info">此处仅显示已审核发放的工资记录。</div>
+            <table class="table table-striped">
+                <thead>
+                <tr>
+                    <th>发放明细ID</th>
+                    <th>基本工资</th>
+                    <th>绩效奖金</th>
+                    <th>实发总额</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="row : ${salaryList}">
+                    <td th:text="${row.detailId}"></td>
+                    <td th:text="${#numbers.formatDecimal(row.baseSalary, 1, 'COMMA', 2, 'POINT')}"></td>
+                    <td th:text="${#numbers.formatDecimal(row.kpiBonus, 1, 'COMMA', 2, 'POINT')}"></td>
+                    <td th:text="${#numbers.formatDecimal(row.grossMoney, 1, 'COMMA', 2, 'POINT')}" class="fw-bold text-success"></td>
+                </tr>
+                <tr th:if="${#lists.isEmpty(salaryList)}">
+                    <td colspan="4" class="text-center text-muted">暂无已发放的工资记录。</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
 </body>
 </html>

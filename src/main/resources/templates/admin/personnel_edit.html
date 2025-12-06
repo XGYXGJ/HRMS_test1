@@ -1,4 +1,4 @@
-<!-- src/main/resources/templates/hr/personnel_edit.html -->
+<!-- src/main/resources/templates/admin/personnel_edit.html -->
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
 <head>
@@ -6,19 +6,32 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
 <body class="p-4">
-<h3>编辑档案 (人事经理)</h3>
-<a th:href="@{/hr/files/{id}(id=${file.fileId})}" class="btn btn-secondary mb-3">返回详情</a>
+<h3>编辑档案 (管理员)</h3>
+<a th:href="@{/admin/personnel/{id}(id=${file.fileId})}" class="btn btn-secondary mb-3">返回详情</a>
 
-<form method="post" th:action="@{/hr/files/edit/{id}(id=${file.fileId})}" class="w-50">
-    <!-- 基本信息字段，同管理员版本 -->
-    <div class="mb-3"><label>姓名</label><input name="name" class="form-control" th:value="${file.name}" required/></div>
-    <div class="mb-3"><label>性别</label><select name="gender" class="form-select"><option value="男" th:selected="${file.gender == '男'}">男</option><option value="女" th:selected="${file.gender == '女'}">女</option></select></div>
+<form method="post" th:action="@{/admin/personnel/update/{id}(id=${file.fileId})}" class="w-75">
+    <!-- 基本信息 -->
+    <div class="row">
+        <div class="col-md-6 mb-3">
+            <label class="form-label">姓名</label>
+            <input name="name" class="form-control" th:value="${file.name}" required/>
+        </div>
+        <div class="col-md-6 mb-3">
+            <label class="form-label">性别</label>
+            <select name="gender" class="form-select">
+                <option value="男" th:selected="${file.gender == '男'}">男</option>
+                <option value="女" th:selected="${file.gender == '女'}">女</option>
+            </select>
+        </div>
+    </div>
     <div class="mb-3"><label>身份证号</label><input name="idNumber" class="form-control" th:value="${file.idNumber}"/></div>
     <div class="mb-3"><label>手机号</label><input name="phoneNumber" class="form-control" th:value="${file.phoneNumber}"/></div>
     <div class="mb-3"><label>地址</label><input name="address" class="form-control" th:value="${file.address}"/></div>
 
     <hr>
     <h5>职位信息</h5>
+    <div class="alert alert-info">出于安全考虑，管理员仅可在此处调整员工职位，如需调动部门，请走正式的“人员调动”流程（开发中）。</div>
+
     <div class="mb-3">
         <label for="positionId" class="form-label">职位</label>
         <select id="positionId" name="positionId" class="form-select">

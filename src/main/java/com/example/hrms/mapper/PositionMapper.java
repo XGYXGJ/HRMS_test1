@@ -31,4 +31,6 @@ public interface PositionMapper extends BaseMapper<Position> {
             "</script>"
     })
     List<Map<String, Object>> selectPositionNamesByIds(@Param("positionIds") List<Integer> positionIds);
+    @Select("SELECT * FROM T_Position WHERE L3_Org_ID = #{l3OrgId}")
+    List<Position> selectPositionsByOrgId(Integer l3OrgId);
 }
