@@ -1,0 +1,45 @@
+<div class="container-fluid">
+    <h4 class="mb-3">工资单审核列表</h4>
+
+    <div th:if="${msg}" class="alert alert-info" th:text="${msg}"></div>
+
+    <div class="table-responsive">
+        <table class="table table-bordered table-hover align-middle">
+            <thead class="table-light">
+            <tr>
+                <th>工资单编号</th>
+                <th>提交人</th>
+                <th>提交时间</th>
+                <th>状态</th>
+                <th style="width:120px;">操作</th>
+            </tr>
+            </thead>
+
+            <tbody>
+            <tr th:each="reg : ${registers}">
+                <td th:text="${reg.registerCode}">REG2025</td>
+
+                <!-- 改为从 submitterMap 取用户名 -->
+                <td th:text="${submitterMap.get(reg.submitterId)?.username}">张三</td>
+
+                <!-- 改为 registerTime -->
+                <td th:text="${#temporals.format(reg.registerTime, 'yyyy-MM-dd HH:mm')}"></td>
+
+                <td>
+                    <span class="badge bg-warning" th:text="${reg.auditStatus}">Pending</span>
+                </td>
+                <td>
+                    <button class="btn btn-sm btn-outline-primary"
+                            th:onclick="|loadContent('/manage/audit/detail/${reg.registerId}?type=Register')|">
+                        查看
+                    </button>
+                </td>
+            </tr>
+
+            <tr th:if="${#lists.isEmpty(registers)}">
+                <td colspan="5" class="text-center text-muted">暂无待审核工资单</td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+</div>

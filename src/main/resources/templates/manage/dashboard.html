@@ -3,90 +3,122 @@
 <head>
     <meta charset="UTF-8">
     <title>管理部门工作台</title>
+
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+
     <style>
-        /* 样式复用 salary/dashboard.html 的 */
-        .sidebar { width: 250px; min-height: 90vh; background-color: #f8f9fa; border-right: 1px solid #dee2e6; position: fixed; top: 56px; bottom: 0; overflow-y: auto; }
-        .main-content { margin-left: 250px; width: calc(100% - 250px); padding: 20px; margin-top: 56px; }
-        .navbar { z-index: 1030; position: fixed; width: 100%; top: 0; }
-        .loading-spinner { display: none; text-align: center; padding: 50px; }
-        .sidebar .list-group-item { cursor: pointer; }
+        .sidebar {
+            width: 250px;
+            min-height: 90vh;
+            background-color: #f8f9fa;
+            border-right: 1px solid #dee2e6;
+            position: fixed;
+            top: 56px;
+            bottom: 0;
+            overflow-y: auto;
+        }
+        .main-content {
+            margin-left: 250px;
+            width: calc(100% - 250px);
+            padding: 20px;
+            margin-top: 56px;
+        }
+        .navbar {
+            z-index: 1030;
+            position: fixed;
+            width: 100%;
+            top: 0;
+        }
+        .loading-spinner {
+            display: none;
+            text-align: center;
+            padding: 50px;
+        }
+        .sidebar .list-group-item {
+            cursor: pointer;
+        }
     </style>
 </head>
 <body>
-<nav class="navbar navbar-dark bg-primary px-3"> <a class="navbar-brand" href="javascript:void(0)" onclick="loadContent('/manage/home', this)">HR 系统 - 管理部门</a>
-    <span class="text-white">欢迎，<span th:text="${session.user.username}">Admin</span></span>
-    <a href="/logout" class="btn btn-sm btn-outline-light ms-3">退出</a>
+
+<nav class="navbar navbar-dark bg-primary px-3">
+    <a class="navbar-brand"
+       style="cursor:pointer"
+       onclick="loadContent('/manage/home', document.querySelector('#sidebarMenu a.active'))">
+        HRMS系统 - 管理部门
+    </a>
+    <div class="d-flex align-items-center">
+        <span class="text-white">
+            欢迎，<span th:text="${session.user.username}">management01</span>
+        </span>
+        <a href="/logout" class="btn btn-sm btn-outline-light ms-3">退出</a>
+    </div>
 </nav>
 
 <div class="d-flex">
     <div class="sidebar">
         <div class="list-group list-group-flush" id="sidebarMenu">
-            <a class="list-group-item list-group-item-action active" onclick="loadContent('/manage/home', this)">
+            <a class="list-group-item list-group-item-action active"
+               onclick="loadContent('/manage/home', this)">
                 <i class="bi bi-speedometer2"></i> 工作概览
             </a>
-            <a class="list-group-item list-group-item-action" onclick="loadContent('/manage/audit/list', this)">
-                <i class="bi bi-check-circle"></i> 工资单审核
+
+            <a class="list-group-item list-group-item-action"
+               onclick="loadContent('/manage/audit/register/list', this)">
+                <i class="bi bi-cash"></i> 工资单审核
+            </a>
+
+            <a class="list-group-item list-group-item-action"
+               onclick="loadContent('/manage/audit/standard/list', this)">
+                <i class="bi bi-file-earmark-ruled"></i> 薪酬标准审核
             </a>
         </div>
     </div>
 
     <div class="main-content">
-        <div id="loading" class="loading-spinner">
-            <div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div>
+        <div id="content-area">
+            <div class="loading-spinner" id="loadingSpinner">
+                <div class="spinner-border text-primary" role="status"></div>
+            </div>
         </div>
-        <div id="content-area"></div>
     </div>
 </div>
 
 <script>
-    // JS 逻辑完全复用 salary/dashboard.html 的
-    document.addEventListener('DOMContentLoaded', function() {
+    document.addEventListener("DOMContentLoaded", function () {
         loadContent('/manage/home', document.querySelector('#sidebarMenu a.active'));
     });
 
+    // 全局方法：片段页内按钮也会用到
     function loadContent(url, element) {
+        // 激活菜单
         if (element) {
-            document.querySelectorAll('#sidebarMenu .list-group-item').forEach(item => item.classList.remove('active'));
+            document.querySelectorAll('#sidebarMenu a')
+                .forEach(a => a.classList.remove('active'));
             element.classList.add('active');
         }
-        const contentArea = document.getElementById('content-area');
-        const loading = document.getElementById('loading');
-        contentArea.style.opacity = '0.5';
-        loading.style.display = 'block';
 
-        fetch(url).then(res => res.text()).then(html => {
-            contentArea.innerHTML = html;
-            contentArea.style.opacity = '1';
-            loading.style.display = 'none';
-            bindFormEvents(); // 重新绑定表单
-        }).catch(err => {
-            contentArea.innerHTML = `<div class="alert alert-danger">加载失败: ${err.message}</div>`;
-            loading.style.display = 'none';
-        });
-    }
+        const spinner = document.getElementById('loadingSpinner');
+        if (spinner) spinner.style.display = 'block';
 
-    function bindFormEvents() {
-        const forms = document.querySelectorAll('#content-area form');
-        forms.forEach(form => {
-            form.onsubmit = function(event) {
-                event.preventDefault();
-                if (form.getAttribute('onsubmit_confirm') && !confirm(form.getAttribute('onsubmit_confirm'))) return;
-
-                const formData = new FormData(form);
-                const action = form.getAttribute('action');
-
-                // POST 请求
-                fetch(action, { method: 'POST', body: formData })
-                    .then(res => res.text())
-                    .then(html => {
-                        document.getElementById('content-area').innerHTML = html;
-                        bindFormEvents();
-                    });
-            };
-        });
+        fetch(url)
+            .then(res => {
+                if (!res.ok) throw new Error("HTTP " + res.status);
+                return res.text();
+            })
+            .then(html => {
+                document.getElementById("content-area").innerHTML = html;
+            })
+            .catch(err => {
+                document.getElementById("content-area").innerHTML =
+                    "<div class='alert alert-danger'>加载失败：" + err + "</div>";
+            })
+            .finally(() => {
+                if (spinner) spinner.style.display = 'none';
+            });
     }
 </script>
+
 </body>
 </html>

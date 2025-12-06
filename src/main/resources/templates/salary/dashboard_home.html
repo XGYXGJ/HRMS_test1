@@ -27,9 +27,9 @@
                     <h5 class="card-title">本月工资登记</h5>
                     <p class="card-text text-muted">一键计算并生成本月全员暂定工资单。</p>
 
-                    <form action="/salary/register/create" method="post" onsubmit_confirm="确定要生成本月工资单吗？">
-                        <button type="submit" class="btn btn-success mt-2">一键登记</button>
-                    </form>
+                    <button type="button"
+                            onclick="loadContent('/salary/register/pre-create')"
+                            class="btn btn-success mt-2">一键登记 (待确认)</button>
                 </div>
             </div>
         </div>

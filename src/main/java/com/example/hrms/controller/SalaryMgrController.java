@@ -31,7 +31,9 @@ public class SalaryMgrController {
     @Autowired private SalaryStandardMasterMapper standardMasterMapper; // 注入标准Mapper用于查重
     @Autowired private PositionMapper positionMapper; // 注入职位Mapper
 
-    // ... (dashboard 等其他方法保持不变) ...
+    // =========================================
+    // 基础页面 (保持不变)
+    // =========================================
     @GetMapping("/dashboard")
     public String dashboard(HttpSession session, Model model) {
         return "salary/dashboard";
@@ -42,7 +44,9 @@ public class SalaryMgrController {
         return "salary/dashboard_home";
     }
 
-    // ================== 薪酬标准管理 ==================
+    // =========================================
+    // 薪酬标准管理 (保持不变)
+    // =========================================
 
     // 1. 制定薪酬标准页面
     @GetMapping("/standard/new")
@@ -92,7 +96,7 @@ public class SalaryMgrController {
         return "salary/standard_add";
     }
 
-    // 2. 提交薪酬标准 (AJAX POST) - 【微调】
+    // 2. 提交薪酬标准 (AJAX POST)
     @PostMapping("/standard/save")
     public String saveStandard(SalaryStandardDTO dto, HttpSession session, Model model) {
         User salary = (User) session.getAttribute("user");
@@ -108,8 +112,8 @@ public class SalaryMgrController {
 
     @GetMapping("/standard/list")
     public String listStandards(HttpSession session, Model model,
-            @RequestParam(value = "standardCode", required = false) String standardCode,
-            @RequestParam(value = "positionName", required = false) String positionName)
+                                @RequestParam(value = "standardCode", required = false) String standardCode,
+                                @RequestParam(value = "positionName", required = false) String positionName)
     {
         User salary = (User) session.getAttribute("user");
         Integer l3OrgId = salary.getL3OrgId();
@@ -184,40 +188,57 @@ public class SalaryMgrController {
         return "salary/standard_detail";
     }
 
-    @PostMapping("/register/create")
-    public String registerSalary(HttpSession session, Model model) {
-        User salary = (User) session.getAttribute("user");
-        try {
-            salaryService.createMonthlyRegister(salary.getL3OrgId());
-            model.addAttribute("msg", "本月工资单已成功生成！");
-        } catch (RuntimeException e) {
-            model.addAttribute("error", e.getMessage());
+    // =========================================
+    // 工资登记与发放 (新的工作流程)
+    // =========================================
+
+    /**
+     * 【新方法 1】执行一键登记，并跳转到新生成的草稿详情页。
+     * 替换了原有的 /register/create (POST) 方法
+     */
+    @GetMapping("/register/pre-create")
+    public String preCreateRegister(HttpSession session, Model model) {
+        User salaryUser = (User) session.getAttribute("user");
+        if (salaryUser == null || salaryUser.getL3OrgId() == null) {
+            model.addAttribute("error", "用户会话或组织信息缺失。");
+            // 这里我们调用 listRegisters 方法来返回 register_list 页面
+            return listRegisters(session, model);
         }
-        List<SalaryRegisterMaster> registers = registerMasterMapper.selectList(
-                new QueryWrapper<SalaryRegisterMaster>()
-                        .eq("L3_Org_ID", salary.getL3OrgId())
-                        .orderByDesc("Pay_Date")
-        );
-        model.addAttribute("registers", registers);
-        return "salary/register_list";
+        Integer l3OrgId = salaryUser.getL3OrgId();
+
+        try {
+            // 1. 调用 Service 执行登记逻辑
+            salaryService.createMonthlyRegister(l3OrgId);
+
+            // 2. 查询本月最新生成的单据 ID (假设 Audit_Status 为 'Pending' 表示刚生成)
+            SalaryRegisterMaster latestRegister = registerMasterMapper.selectOne(
+                    new QueryWrapper<SalaryRegisterMaster>()
+                            .eq("L3_Org_ID", l3OrgId)
+                            // 假设刚生成的单据状态是 Pending
+                            .eq("Audit_Status", "Pending")
+                            .orderByDesc("Register_ID")
+                            .last("LIMIT 1")
+            );
+
+            if (latestRegister != null) {
+                // 3. 重定向到新的草稿详情页
+                return "redirect:/salary/register/draft-detail/" + latestRegister.getRegisterId();
+            } else {
+                model.addAttribute("error", "工资单生成失败，请重试或检查是否有员工信息。");
+                return listRegisters(session, model); // 返回列表页
+            }
+        } catch (RuntimeException e) {
+            model.addAttribute("error", "生成工资单时发生错误: " + e.getMessage());
+            return listRegisters(session, model); // 返回列表页
+        }
     }
 
-    @GetMapping("/register/list")
-    public String listRegisters(HttpSession session, Model model) {
-        User salary = (User) session.getAttribute("user");
-        List<SalaryRegisterMaster> registers = registerMasterMapper.selectList(
-                new QueryWrapper<SalaryRegisterMaster>()
-                        .eq("L3_Org_ID", salary.getL3OrgId())
-                        .orderByDesc("Pay_Date")
-        );
-        model.addAttribute("registers", registers);
-        return "salary/register_list";
-    }
-
-    @GetMapping("/register/detail/{id}")
-    public String viewRegisterDetail(@PathVariable Integer id, Model model) {
+    /**
+     * 【新方法 2】展示待确认的工资单草稿详情。
+     */
+    @GetMapping("/register/draft-detail/{id}")
+    public String viewRegisterDraftDetail(@PathVariable Integer id, Model model) {
         SalaryRegisterMaster master = registerMasterMapper.selectById(id);
-        // 增加安全检查：如果查不到单据，直接返回列表页，防止模板报空指针
         if (master == null) {
             return "redirect:/salary/register/list";
         }
@@ -227,49 +248,127 @@ public class SalaryMgrController {
         List<SalaryItem> allItems = itemMapper.selectList(null);
         model.addAttribute("allItems", allItems);
 
-        // 2. 获取发放详情
+        // 2. 构建明细列表，使用私有方法
+        List<Map<String, Object>> finalDetails = buildFinalDetails(id, allItems);
+        model.addAttribute("finalDetails", finalDetails);
+
+        // 加载新的模板，该模板包含发送审核按钮
+        return "salary/register_detail_draft"; // 需要新建此 HTML 文件
+    }
+
+    /**
+     * 【新方法 3】处理“发送审核”请求，更新工资单状态。
+     */
+    @PostMapping("/register/send-for-audit/{id}")
+    public String sendRegisterForAudit(@PathVariable Integer id, HttpSession session, Model model) {
+        User salaryUser = (User) session.getAttribute("user");
+        if (salaryUser == null) {
+            model.addAttribute("error", "用户会话信息缺失，请重新登录。");
+            return "redirect:/salary/register/draft-detail/" + id;
+        }
+
+        // 1. 更新状态
+        SalaryRegisterMaster master = new SalaryRegisterMaster();
+        master.setRegisterId(id);
+        master.setAuditStatus("Pending"); // 状态保持为 Pending (待审核)
+        //master.setSubmitTime(LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
+        master.setSubmitterId(salaryUser.getUserId()); // 如果 Master 表中有这个字段
+
+        registerMasterMapper.updateById(master);
+
+        model.addAttribute("msg", "工资单 " + id + " 已成功提交审核！");
+        // 2. 重定向到工资单列表页
+        return "redirect:/salary/register/list";
+    }
+
+    /**
+     * 查询历史工资单列表 (保持不变)
+     */
+    @GetMapping("/register/list")
+    public String listRegisters(HttpSession session, Model model) {
+        User salary = (User) session.getAttribute("user");
+        // 增加 null 检查
+        if (salary == null) {
+            model.addAttribute("error", "用户会话已过期，请重新登录。");
+            // 这里应该返回登录页面的视图名称，但根据现有代码，我们重定向到 /dashboard/home，让 Thymeleaf 捕获错误
+            return "redirect:/salary/dashboard/home";
+        }
+
+        List<SalaryRegisterMaster> registers = registerMasterMapper.selectList(
+                new QueryWrapper<SalaryRegisterMaster>()
+                        .eq("L3_Org_ID", salary.getL3OrgId())
+                        .orderByDesc("Pay_Date")
+        );
+        model.addAttribute("registers", registers);
+        return "salary/register_list";
+    }
+
+    /**
+     * 查看已提交/已审核的工资单明细 (已修改，调用私有方法)
+     */
+    @GetMapping("/register/detail/{id}")
+    public String viewRegisterDetail(@PathVariable Integer id, Model model) {
+        SalaryRegisterMaster master = registerMasterMapper.selectById(id);
+        if (master == null) {
+            return "redirect:/salary/register/list";
+        }
+        model.addAttribute("master", master);
+
+        // 1. 获取所有薪酬项目 (用于表头)
+        List<SalaryItem> allItems = itemMapper.selectList(null);
+        model.addAttribute("allItems", allItems);
+
+        // 2. 构建明细列表，使用私有方法
+        List<Map<String, Object>> finalDetails = buildFinalDetails(id, allItems);
+        model.addAttribute("finalDetails", finalDetails);
+
+        return "salary/register_detail";
+    }
+
+    // =========================================
+    // 私有辅助方法：提取自原 viewRegisterDetail
+    // =========================================
+
+    /**
+     * 辅助方法：构建工资单明细的表格数据
+     */
+    private List<Map<String, Object>> buildFinalDetails(Integer registerId, List<SalaryItem> allItems) {
+        // 1. 获取发放详情
         List<SalaryRegisterDetail> details = registerDetailMapper.selectList(
-                new QueryWrapper<SalaryRegisterDetail>().eq("Register_ID", id)
+                new QueryWrapper<SalaryRegisterDetail>().eq("Register_ID", registerId)
         );
 
-        // --- 【修复开始：增加空列表和Null值的安全检查】 ---
+        if (details == null || details.isEmpty()) {
+            return List.of();
+        }
 
-        // 预定义空 Map，防止后续逻辑报错
+        // 2. 获取所有员工和职位信息
+        List<Integer> userIds = details.stream()
+                .map(SalaryRegisterDetail::getUserId)
+                .filter(uid -> uid != null)
+                .distinct()
+                .collect(Collectors.toList());
+
         Map<Integer, User> userMap = new HashMap<>();
         Map<Integer, Position> positionMap = new HashMap<>();
 
-        if (details != null && !details.isEmpty()) {
-            // A. 安全获取 User IDs (去重)
-            List<Integer> userIds = details.stream()
-                    .map(SalaryRegisterDetail::getUserId)
-                    .filter(uid -> uid != null) // 过滤掉可能的 null
+        if (!userIds.isEmpty()) {
+            List<User> users = userMapper.selectBatchIds(userIds);
+            userMap = users.stream().collect(Collectors.toMap(User::getUserId, u -> u));
+
+            List<Integer> positionIds = users.stream()
+                    .map(User::getPositionId)
+                    .filter(pid -> pid != null)
                     .distinct()
                     .collect(Collectors.toList());
 
-            // B. 只有当 ID 列表不为空时才查询数据库
-            if (!userIds.isEmpty()) {
-                List<User> users = userMapper.selectBatchIds(userIds);
-                // 转换为 Map
-                userMap = users.stream().collect(Collectors.toMap(User::getUserId, u -> u));
-
-                // C. 安全获取 Position IDs (过滤 null + 去重)
-                List<Integer> positionIds = users.stream()
-                        .map(User::getPositionId)
-                        .filter(pid -> pid != null) // 【关键点】必须过滤掉 null，否则 selectBatchIds 会报错
-                        .distinct()
-                        .collect(Collectors.toList());
-
-                // D. 只有当 Position ID 列表不为空时才查询
-                if (!positionIds.isEmpty()) {
-                    List<Position> positions = positionMapper.selectBatchIds(positionIds);
-                    positionMap = positions.stream().collect(Collectors.toMap(Position::getPositionId, p -> p));
-                }
+            if (!positionIds.isEmpty()) {
+                List<Position> positions = positionMapper.selectBatchIds(positionIds);
+                positionMap = positions.stream().collect(Collectors.toMap(Position::getPositionId, p -> p));
             }
         }
-        // --- 【修复结束】 ---
 
-        // 5. 构建最终的明细列表
-        // 需要使用 final 变量或者重新赋值给临时变量以供 lambda 使用
+        // 3. 构造最终展示的列表
         Map<Integer, User> finalUserMap = userMap;
         Map<Integer, Position> finalPositionMap = positionMap;
 
@@ -282,15 +381,17 @@ public class SalaryMgrController {
                     : null;
 
             empDetail.put("userId", detail.getUserId());
-            empDetail.put("userName", user != null ? user.getUsername() : "未知用户"); // 防止 user 为 null
-            empDetail.put("positionName", position != null ? position.getPositionName() : "-"); // 防止 position 为 null
+            empDetail.put("userName", user != null ? user.getUsername() : "未知用户");
+            empDetail.put("positionName", position != null ? position.getPositionName() : "-");
             empDetail.put("grossMoney", detail.getGrossMoney());
 
             Map<Integer, BigDecimal> itemValues = new HashMap<>();
             for (SalaryItem item : allItems) {
+                // 仅示例：这里应根据 T_Salary_Register_Detail 表的实际字段进行赋值
                 if ("基本工资".equals(item.getItemName())) {
                     itemValues.put(item.getItemId(), detail.getBaseSalary());
                 } else {
+                    // 对于其他未明确映射的项目，暂时设置为 0.00
                     itemValues.put(item.getItemId(), BigDecimal.ZERO);
                 }
             }
@@ -299,8 +400,6 @@ public class SalaryMgrController {
             return empDetail;
         }).collect(Collectors.toList());
 
-        model.addAttribute("finalDetails", finalDetails);
-
-        return "salary/register_detail";
+        return finalDetails;
     }
 }

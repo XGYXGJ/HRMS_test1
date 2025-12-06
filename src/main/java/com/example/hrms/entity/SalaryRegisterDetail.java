@@ -18,4 +18,8 @@ public class SalaryRegisterDetail {
     private BigDecimal baseSalary;
     private BigDecimal kpiBonus;
     private BigDecimal grossMoney;
+    private LocalDate payrollMonth;
+
+    public LocalDate getPayrollMonth() { return payrollMonth; }
+    public void setPayrollMonth(LocalDate payrollMonth) { this.payrollMonth = payrollMonth; }
 }

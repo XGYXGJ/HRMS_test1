@@ -1,0 +1,44 @@
+<div class="container-fluid">
+    <h4 class="mb-3">薪酬标准审核列表</h4>
+
+    <div th:if="${msg}" class="alert alert-info" th:text="${msg}"></div>
+
+    <div class="table-responsive">
+        <table class="table table-bordered table-hover align-middle">
+            <thead class="table-light">
+            <tr>
+                <th>标准编号</th>
+                <th>标准名称</th>
+                <th>适用职位</th>
+                <th>提交人</th>
+                <th>提交时间</th>
+                <th>状态</th>
+                <th style="width:120px;">操作</th>
+            </tr>
+            </thead>
+
+            <tbody>
+            <tr th:each="std : ${standards}">
+                <td th:text="${std.standardCode}">STD2025</td>
+                <td th:text="${std.standardName}">研发岗标准</td>
+                <td th:text="${positionMap.get(std.positionId)?.positionName}">研发岗</td>
+                <td th:text="${userMap.get(std.submitterId)?.username}">李四</td>
+                <td th:text="${#temporals.format(std.submissionTime, 'yyyy-MM-dd HH:mm')}"></td>
+                <td>
+                    <span class="badge bg-warning" th:text="${std.auditStatus}">Pending</span>
+                </td>
+                <td>
+                    <button class="btn btn-sm btn-outline-primary"
+                            th:onclick="|loadContent('/manage/audit/detail/${std.standardId}?type=Standard')|">
+                        查看
+                    </button>
+                </td>
+            </tr>
+
+            <tr th:if="${#lists.isEmpty(standards)}">
+                <td colspan="7" class="text-center text-muted">暂无待审核薪酬标准</td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+</div>

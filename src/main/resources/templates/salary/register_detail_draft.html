@@ -1,0 +1,56 @@
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h4>待确认工资单草稿明细...</h4>
+        <form th:action="'/salary/register/send-for-audit/' + ${master.registerId}" method="post"
+              onsubmit="return confirm('确定要将此工资单发送给管理员进行审核吗？')">
+            <button type="submit" class="btn btn-success"
+                    th:if="${master.auditStatus == 'Pending'}">发送审核</button>
+            <button type="button" onclick="loadContent('/salary/register/list')" class="btn btn-secondary">返回列表</button>
+        </form>
+    </div>
+
+    <div th:if="${master}" class="alert alert-info py-2 small">
+        <strong>单号:</strong> <span th:text="${master.registerId}"></span> |
+        <strong>发放日期:</strong> <span th:text="${master.payDate}"></span> |
+        <strong>审核状态:</strong>
+        <span class="badge bg-warning text-dark">待确认/待审核</span>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-bordered table-hover mb-0">
+                    <thead class="table-light">
+                    <tr>
+                        <th>员工编号</th>
+                        <th>姓名</th>
+                        <th>职位</th>
+
+                        <th th:each="item : ${allItems}" th:text="${item.itemName}">薪酬项目名称</th>
+
+                        <th>实发金额 (应发合计)</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="emp : ${finalDetails}">
+                        <td th:text="${emp.userId}">101</td>
+                        <td th:text="${emp.userName}">张三</td>
+                        <td th:text="${emp.positionName}">软件工程师</td>
+
+                        <td th:each="item : ${allItems}">
+                            <span th:with="value=${emp.itemValues.get(item.itemId)}">
+                                <span th:text="${value != null ? #numbers.formatDecimal(value, 1, 'COMMA', 2, 'POINT') : '0.00'}">0.00</span>
+                            </span>
+                        </td>
+
+                        <td class="fw-bold text-success" th:text="${#numbers.formatDecimal(emp.grossMoney, 1, 'COMMA', 2, 'POINT')}">5500.00</td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div th:if="${#lists.isEmpty(finalDetails)}" class="card-footer text-center text-muted">
+            本月工资单暂无员工明细数据。
+        </div>
+    </div>
+</div>

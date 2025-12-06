@@ -34,7 +34,7 @@ public class AdminAuditController {
     @GetMapping("/standard/{id}/{action}")
     public String auditStandard(@PathVariable Integer id, @PathVariable String action) {
         boolean pass = "pass".equals(action);
-        salaryService.auditStandard(id, pass);
+        //salaryService.auditStandard(id, pass);
         return "redirect:/admin/audit/standards";
     }
 

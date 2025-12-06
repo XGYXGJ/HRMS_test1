@@ -72,7 +72,7 @@ public class SalaryService {
         }
     }
 
-    // 3. 一键登记本月工资 (保持不变)
+    // 3. 一键登记本月工资 (【修复 Payroll_Month 必填】)
     @Transactional
     public void createMonthlyRegister(Integer l3OrgId) {
         LocalDate now = LocalDate.now();
@@ -85,38 +85,50 @@ public class SalaryService {
             throw new RuntimeException("该部门本月工资已登记，请勿重复操作！");
         }
 
-        List<User> employees = userMapper.selectList(new QueryWrapper<User>().eq("L3_Org_ID", l3OrgId));
+        List<User> employees = userMapper.selectList(
+                new QueryWrapper<User>().eq("L3_Org_ID", l3OrgId)
+        );
         if (employees.isEmpty()) return;
 
         Map<Integer, String> itemTypeMap = itemMapper.selectList(null).stream()
                 .collect(Collectors.toMap(SalaryItem::getItemId, SalaryItem::getItemType));
 
+        // ====== 插入主表 ======
         SalaryRegisterMaster regMaster = new SalaryRegisterMaster();
         regMaster.setL3OrgId(l3OrgId);
         regMaster.setAuditStatus("Pending");
-        regMaster.setPayDate(now);
+        regMaster.setPayDate(now);   // 主表 Pay_Date = 当月
         regMaster.setTotalAmount(BigDecimal.ZERO);
         regMaster.setTotalPeople(0);
         registerMasterMapper.insert(regMaster);
+
+        // 明细表 Payroll_Month 用主表 Pay_Date
+        // 如果你希望记录为“某月第一天”，可以 now.withDayOfMonth(1)
+        LocalDate payrollMonth = regMaster.getPayDate();
 
         BigDecimal totalAmount = BigDecimal.ZERO;
         int peopleCount = 0;
 
         for (User emp : employees) {
-            SalaryStandardMaster validStandard = standardMasterMapper.selectOne(new QueryWrapper<SalaryStandardMaster>()
-                    .eq("L3_Org_ID", l3OrgId)
-                    .eq("Position_ID", emp.getPositionId())
-                    .eq("Audit_Status", "Approved")
-                    .orderByDesc("Submission_Time")
-                    .last("LIMIT 1"));
+            SalaryStandardMaster validStandard =
+                    standardMasterMapper.selectOne(
+                            new QueryWrapper<SalaryStandardMaster>()
+                                    .eq("L3_Org_ID", l3OrgId)
+                                    .eq("Position_ID", emp.getPositionId())
+                                    .eq("Audit_Status", "Approved")
+                                    .orderByDesc("Submission_Time")
+                                    .last("LIMIT 1")
+                    );
 
             if (validStandard == null) {
                 continue;
             }
 
-            List<SalaryStandardDetail> standardDetails = standardDetailMapper.selectList(
-                    new QueryWrapper<SalaryStandardDetail>().eq("Standard_ID", validStandard.getStandardId())
-            );
+            List<SalaryStandardDetail> standardDetails =
+                    standardDetailMapper.selectList(
+                            new QueryWrapper<SalaryStandardDetail>()
+                                    .eq("Standard_ID", validStandard.getStandardId())
+                    );
 
             BigDecimal grossMoney = BigDecimal.ZERO;
             BigDecimal baseSalary = BigDecimal.ZERO;
@@ -139,28 +151,26 @@ public class SalaryService {
                 if (type == null || "Base".equalsIgnoreCase(type)) continue;
 
                 if ("Ratio".equalsIgnoreCase(type)) {
-                    // *** 核心修改：Ratio 作为系数项 (例如保险、公积金、绩效比例) ***
-                    // val 是系数，计算金额 = baseSalary * 系数
+                    // Ratio 作为系数项
                     BigDecimal calculatedAmount = baseSalary.multiply(val);
-                    // Ratio项根据系数正负自动加减
                     grossMoney = grossMoney.add(calculatedAmount);
                 } else if ("Penalty".equalsIgnoreCase(type)) {
-                    // Penalty 作为固定金额扣款
                     grossMoney = grossMoney.subtract(val);
                 } else {
-                    // Bonus, Subsidy 等作为固定金额加项
                     grossMoney = grossMoney.add(val);
                 }
             }
 
-            // 保存明细 Detail
+            // ====== 插入明细表 ======
             SalaryRegisterDetail regDetail = new SalaryRegisterDetail();
             regDetail.setRegisterId(regMaster.getRegisterId());
             regDetail.setUserId(emp.getUserId());
-            //regDetail.setUserName(emp.getUsername());
             regDetail.setBaseSalary(baseSalary);
             regDetail.setKpiBonus(BigDecimal.ZERO);
             regDetail.setGrossMoney(grossMoney);
+
+            // ✅ 【关键修复：给 Payroll_Month 赋值】
+            regDetail.setPayrollMonth(payrollMonth);
 
             registerDetailMapper.insert(regDetail);
 
@@ -176,14 +186,32 @@ public class SalaryService {
     // 4. 供HR查询历史标准 (保持不变)
     public List<SalaryStandardMaster> getStandardsByOrg(Integer orgId) {
         return standardMasterMapper.selectList(
-                new QueryWrapper<SalaryStandardMaster>().eq("L3_Org_ID", orgId).orderByDesc("Submission_Time")
+                new QueryWrapper<SalaryStandardMaster>()
+                        .eq("L3_Org_ID", orgId)
+                        .orderByDesc("Submission_Time")
         );
     }
 
     // 5. 查询标准详情 (保持不变)
     public List<SalaryStandardDetail> getStandardDetails(Integer standardId) {
         return standardDetailMapper.selectList(
-                new QueryWrapper<SalaryStandardDetail>().eq("Standard_ID", standardId)
+                new QueryWrapper<SalaryStandardDetail>()
+                        .eq("Standard_ID", standardId)
         );
+    }
+
+    // 6. 审核薪酬标准 - 【修复点：新增数据库更新逻辑】
+    @Transactional
+    public void auditStandard(Integer standardId, Integer auditorId, boolean pass) {
+        SalaryStandardMaster master = new SalaryStandardMaster();
+        master.setStandardId(standardId);
+
+        String auditStatus = pass ? "Approved" : "Rejected";
+        master.setAuditStatus(auditStatus);
+
+        master.setAuditorId(auditorId);
+        master.setAuditTime(LocalDateTime.now());
+
+        standardMasterMapper.updateById(master);
     }
 }

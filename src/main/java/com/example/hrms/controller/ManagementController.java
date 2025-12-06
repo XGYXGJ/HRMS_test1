@@ -3,105 +3,196 @@ package com.example.hrms.controller;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.example.hrms.entity.*;
 import com.example.hrms.mapper.*;
-import com.example.hrms.service.SalaryService;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 
-import java.math.BigDecimal;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.time.LocalDateTime;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Controller
 @RequestMapping("/manage")
 public class ManagementController {
 
-    @Autowired private SalaryService salaryService;
     @Autowired private SalaryRegisterMasterMapper registerMasterMapper;
     @Autowired private SalaryRegisterDetailMapper registerDetailMapper;
-    @Autowired private UserMapper userMapper;
+    @Autowired private SalaryStandardMasterMapper standardMasterMapper;
+    @Autowired private SalaryStandardDetailMapper standardDetailMapper;
     @Autowired private PositionMapper positionMapper;
+    @Autowired private UserMapper userMapper;
     @Autowired private SalaryItemMapper itemMapper;
 
-    // 1. 管理部门主框架 (带有侧边栏的页面)
+    // 1. 主框架
     @GetMapping("/dashboard")
-    public String dashboard(HttpSession session, Model model) {
-        User user = (User) session.getAttribute("user");
-        model.addAttribute("user", user);
+    public String dashboard() {
         return "manage/dashboard";
     }
 
-    // 2. 仪表盘首页 (Fragment)
+    // 2. 工作台首页（片段）
     @GetMapping("/home")
-    public String dashboardHome(Model model) {
-        // 统计待审核数量
+    public String home(Model model) {
         Long pendingCount = registerMasterMapper.selectCount(
-                new QueryWrapper<SalaryRegisterMaster>().eq("Audit_Status", "Pending")
+                new QueryWrapper<SalaryRegisterMaster>().eq("audit_status", "Pending")
         );
         model.addAttribute("pendingCount", pendingCount);
-        return "manage/home";
+
+        Long pendingStandardCount = standardMasterMapper.selectCount(
+                new QueryWrapper<SalaryStandardMaster>().eq("audit_status", "Pending")
+        );
+        model.addAttribute("pendingStandardCount", pendingStandardCount);
+
+        return "manage/dashboard_home";
     }
 
-    // 3. 待审核工资单列表 (Fragment)
-    @GetMapping("/audit/list")
-    public String auditList(Model model) {
+    // 3a. 工资单审核列表
+    @GetMapping("/audit/register/list")
+    public String registerAuditList(Model model) {
+
         List<SalaryRegisterMaster> registers = registerMasterMapper.selectList(
                 new QueryWrapper<SalaryRegisterMaster>()
-                        .eq("Audit_Status", "Pending") // 只看待审核
-                        .orderByDesc("Pay_Date")
+                        .eq("audit_status", "Pending")
+                        .orderByDesc("register_time")
         );
+
+        // ====== 新增：构建 submitterMap，供模板显示“提交人” ======
+        List<Integer> submitterIds = registers.stream()
+                .map(SalaryRegisterMaster::getSubmitterId)
+                .filter(Objects::nonNull)
+                .distinct()
+                .collect(Collectors.toList());
+
+        Map<Integer, User> submitterMap = submitterIds.isEmpty()
+                ? new HashMap<>()
+                : userMapper.selectBatchIds(submitterIds).stream()
+                .collect(Collectors.toMap(User::getUserId, u -> u));
+
         model.addAttribute("registers", registers);
-        return "manage/audit_list";
+        model.addAttribute("submitterMap", submitterMap);
+        return "manage/audit_list_register";
     }
 
-    // 4. 审核详情页 (Fragment)
-    @GetMapping("/audit/detail/{id}")
-    public String auditDetail(@PathVariable Integer id, Model model) {
-        SalaryRegisterMaster master = registerMasterMapper.selectById(id);
-        if (master == null) return "redirect:/manage/audit/list"; // 容错
+    // 3b. 薪酬标准审核列表
+    @GetMapping("/audit/standard/list")
+    public String standardAuditList(Model model) {
 
-        model.addAttribute("master", master);
-
-        // 复用薪酬经理的明细查询逻辑 (获取 Item, User, Position 等)
-        // 为了代码简洁，这里直接复制之前 viewRegisterDetail 的核心构建逻辑
-        // 实际开发中建议抽取到 Service 方法: salaryService.getRegisterDetailsMap(id)
-
-        List<SalaryItem> allItems = itemMapper.selectList(null);
-        model.addAttribute("allItems", allItems);
-
-        List<SalaryRegisterDetail> details = registerDetailMapper.selectList(
-                new QueryWrapper<SalaryRegisterDetail>().eq("Register_ID", id)
+        List<SalaryStandardMaster> standards = standardMasterMapper.selectList(
+                new QueryWrapper<SalaryStandardMaster>()
+                        .eq("audit_status", "Pending")
+                        .orderByDesc("submission_time")
         );
 
-        // ... (此处省略构建 finalDetails 的代码，逻辑与 SalaryMgrController.viewRegisterDetail 完全一致) ...
-        // 请务必将 SalaryMgrController 中构建 finalDetails 的代码复制过来
-        // 包括 fetching Users, Positions, building the map structure.
+        List<Integer> positionIds = standards.stream()
+                .map(SalaryStandardMaster::getPositionId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
 
-        // 临时模拟空数据防止报错，请替换为真实逻辑
-        model.addAttribute("finalDetails", List.of());
+        Map<Integer, Position> positionMap = positionIds.isEmpty()
+                ? new HashMap<>()
+                : positionMapper.selectBatchIds(positionIds).stream()
+                .collect(Collectors.toMap(Position::getPositionId, p -> p));
 
-        return "manage/audit_detail";
+        List<Integer> submitterIds = standards.stream()
+                .map(SalaryStandardMaster::getSubmitterId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
+
+        Map<Integer, User> userMap = submitterIds.isEmpty()
+                ? new HashMap<>()
+                : userMapper.selectBatchIds(submitterIds).stream()
+                .collect(Collectors.toMap(User::getUserId, u -> u));
+
+        model.addAttribute("standards", standards);
+        model.addAttribute("positionMap", positionMap);
+        model.addAttribute("userMap", userMap);
+
+        return "manage/audit_list_standard";
     }
 
-    // 5. 执行审核动作 (Approve/Reject)
-    @PostMapping("/audit/process")
-    public String processAudit(@RequestParam Integer registerId,
-                               @RequestParam String action,
-                               HttpSession session, Model model) {
-        User user = (User) session.getAttribute("user");
-        boolean pass = "pass".equals(action);
+    // 4. 审核详情（通用）
+    @GetMapping("/audit/detail/{id}")
+    public String auditDetail(@PathVariable Integer id,
+                              @RequestParam String type,
+                              Model model) {
 
-        try {
-            //salaryService.auditRegister(registerId, user.getUserId(), pass, null);
-            model.addAttribute("msg", pass ? "审核通过，工资单已发放！" : "审核驳回，已退回给薪酬经理。");
-        } catch (Exception e) {
-            model.addAttribute("error", "操作失败：" + e.getMessage());
+        if ("Register".equalsIgnoreCase(type)) {
+            SalaryRegisterMaster master = registerMasterMapper.selectById(id);
+            if (master == null) return "redirect:/manage/audit/register/list";
+
+            List<SalaryRegisterDetail> details = registerDetailMapper.selectList(
+                    new QueryWrapper<SalaryRegisterDetail>().eq("register_id", id)
+            );
+
+            Map<Integer, String> itemMap = itemMapper.selectList(null).stream()
+                    .collect(Collectors.toMap(SalaryItem::getItemId, SalaryItem::getItemName));
+
+            // ====== 新增：查询提交人，供详情页显示 ======
+            User submitter = master.getSubmitterId() == null
+                    ? null
+                    : userMapper.selectById(master.getSubmitterId());
+
+            model.addAttribute("master", master);
+            model.addAttribute("details", details);
+            model.addAttribute("itemMap", itemMap);
+            model.addAttribute("submitter", submitter);
+
+            return "manage/audit_detail_register";
         }
 
-        return auditList(model); // 操作完成后返回列表页
+        SalaryStandardMaster master = standardMasterMapper.selectById(id);
+        if (master == null) return "redirect:/manage/audit/standard/list";
+
+        List<SalaryStandardDetail> details = standardDetailMapper.selectList(
+                new QueryWrapper<SalaryStandardDetail>().eq("standard_id", id)
+        );
+
+        Position position = positionMapper.selectById(master.getPositionId());
+        User submitter = userMapper.selectById(master.getSubmitterId());
+
+        Map<Integer, String> itemMap = itemMapper.selectList(null).stream()
+                .collect(Collectors.toMap(SalaryItem::getItemId, SalaryItem::getItemName));
+
+        model.addAttribute("master", master);
+        model.addAttribute("details", details);
+        model.addAttribute("position", position);
+        model.addAttribute("submitter", submitter);
+        model.addAttribute("itemMap", itemMap);
+
+        return "manage/audit_detail_standard";
+    }
+
+    // 5. 审核动作
+    @PostMapping("/audit/process")
+    public String processAudit(@RequestParam String type,
+                               @RequestParam Integer id,
+                               @RequestParam String action,
+                               HttpSession session) {
+
+        User auditor = (User) session.getAttribute("user");
+        if (auditor == null) return "redirect:/login";
+
+        boolean pass = "pass".equalsIgnoreCase(action);
+
+        if ("Register".equalsIgnoreCase(type)) {
+            SalaryRegisterMaster master = registerMasterMapper.selectById(id);
+            if (master != null) {
+                master.setAuditStatus(pass ? "Approved" : "Rejected");
+                master.setAuditorId(auditor.getUserId());
+                master.setAuditTime(LocalDateTime.now());
+                registerMasterMapper.updateById(master);
+            }
+            return "redirect:/manage/dashboard";
+        }
+
+        SalaryStandardMaster master = standardMasterMapper.selectById(id);
+        if (master != null) {
+            master.setAuditStatus(pass ? "Approved" : "Rejected");
+            master.setAuditorId(auditor.getUserId());
+            master.setAuditTime(LocalDateTime.now());
+            standardMasterMapper.updateById(master);
+        }
+        return "redirect:/manage/dashboard";
     }
 }
