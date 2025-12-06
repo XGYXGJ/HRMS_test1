@@ -1,0 +1,57 @@
+<!-- src/main/resources/templates/hr/position_list.html -->
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>职位管理</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+<div class="container mt-4">
+    <h3>本机构职位管理</h3>
+    <a href="/hr/dashboard" class="btn btn-secondary mb-3">返回工作台</a>
+
+    <div th:if="${param.success}" class="alert alert-success">职位创建成功！</div>
+    <div th:if="${error}" class="alert alert-danger" th:text="${error}"></div>
+
+    <!-- 新建职位表单 -->
+    <div class="card mb-4">
+        <div class.card-header><h4>新建职位</h4></div>
+        <div class="card-body">
+            <form th:action="@{/hr/positions/save}" method="post" th:object="${newPosition}">
+                <div class="mb-3">
+                    <label for="positionName" class="form-label">职位名称</label>
+                    <input type="text" id="positionName" th:field="*{positionName}" class="form-control" required>
+                </div>
+                <button type="submit" class="btn btn-primary">添加职位</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- 职位列表 -->
+    <h4>现有职位列表</h4>
+    <table class="table table-striped">
+        <thead>
+        <tr>
+            <th>职位ID</th>
+            <th>职位名称</th>
+            <th>操作</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="pos : ${positions}">
+            <td th:text="${pos.positionId}"></td>
+            <td th:text="${pos.positionName}"></td>
+            <td>
+                <a th:href="@{/hr/positions/delete/{id}(id=${pos.positionId})}"
+                   class="btn btn-danger btn-sm"
+                   onclick="return confirm('警告：删除职位可能导致关联员工的职位信息丢失，确定吗？')">删除</a>
+            </td>
+        </tr>
+        <tr th:if="${#lists.isEmpty(positions)}">
+            <td colspan="3" class="text-center text-muted">暂无自定义职位，请在上方添加。</td>
+        </tr>
+        </tbody>
+    </table>
+</div>
+</body>
+</html>
