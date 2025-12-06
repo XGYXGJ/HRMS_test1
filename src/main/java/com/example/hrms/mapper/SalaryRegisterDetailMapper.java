@@ -12,9 +12,4 @@ import java.util.List;
  * 解决了员工能看到未审核工资的漏洞
  */
 public interface SalaryRegisterDetailMapper extends BaseMapper<SalaryRegisterDetail> {
-    @Select("SELECT d.* FROM T_Salary_Register_Detail d " +
-            "LEFT JOIN T_Salary_Register_Master m ON d.Register_ID = m.Register_ID " +
-            "WHERE d.User_ID = #{userId} AND m.Audit_Status = 'Approved' " +
-            "ORDER BY m.Pay_Date DESC")
-    List<SalaryRegisterDetail> selectApprovedDetailsByUserId(Integer userId);
 }

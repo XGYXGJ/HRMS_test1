@@ -30,6 +30,7 @@ public class SalaryMgrController {
     @Autowired private SalaryRegisterDetailMapper registerDetailMapper;
     @Autowired private SalaryStandardMasterMapper standardMasterMapper; // 注入标准Mapper用于查重
     @Autowired private PositionMapper positionMapper; // 注入职位Mapper
+    @Autowired private PersonnelFileMapper personnelFileMapper;
 
     // =========================================
     // 基础页面 (保持不变)
@@ -81,18 +82,13 @@ public class SalaryMgrController {
         // C. 当前时间
         model.addAttribute("currentTime", LocalDateTime.now());
 
-        // D. 获取**当前用户所属机构**的所有职位 (供下拉列表使用)
-        // 从 User 对象中获取 L3 机构 ID
-        Integer l3OrgId = user.getL3OrgId();
-
-        // 调用 PositionMapper 中根据机构 ID 查询的方法
-        // 注意：T_Position 表需要有 L3_Org_ID 字段，否则会查询失败或查出所有职位
-        List<Position> positions = positionMapper.selectPositionsInL3Org(l3OrgId); //
-        model.addAttribute("positions", positions);
-
-        // E. 获取所有薪酬项目 (供复选框使用)
+        // D. 获取所有薪酬项目 (供复选框使用)
         model.addAttribute("items", itemMapper.selectList(null));
 
+        // E. 获取当前机构下「适用职位」列表（关键修复）
+        Integer l3OrgId = (user != null) ? user.getL3OrgId() : null;
+        List<Position> positions = salaryService.getApplicablePositionsByOrg(l3OrgId);
+        model.addAttribute("positions", positions);
         return "salary/standard_add";
     }
 
@@ -102,7 +98,6 @@ public class SalaryMgrController {
         User salary = (User) session.getAttribute("user");
 
         // 注意：这里需要确保 Service 层处理了 dto.getStandardCode() 并保存到数据库
-        // 如果 Service 没改，你需要修改 Service 或者在这里手动处理 Entity 转换
         salaryService.submitStandard(dto, salary.getUserId(), salary.getL3OrgId());
 
         model.addAttribute("msg", "薪酬标准 " + dto.getStandardCode() + " 已提交，等待审核。");
@@ -271,7 +266,6 @@ public class SalaryMgrController {
         SalaryRegisterMaster master = new SalaryRegisterMaster();
         master.setRegisterId(id);
         master.setAuditStatus("Pending"); // 状态保持为 Pending (待审核)
-        //master.setSubmitTime(LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
         master.setSubmitterId(salaryUser.getUserId()); // 如果 Master 表中有这个字段
 
         registerMasterMapper.updateById(master);
@@ -290,7 +284,6 @@ public class SalaryMgrController {
         // 增加 null 检查
         if (salary == null) {
             model.addAttribute("error", "用户会话已过期，请重新登录。");
-            // 这里应该返回登录页面的视图名称，但根据现有代码，我们重定向到 /dashboard/home，让 Thymeleaf 捕获错误
             return "redirect:/salary/dashboard/home";
         }
 
@@ -304,7 +297,7 @@ public class SalaryMgrController {
     }
 
     /**
-     * 查看已提交/已审核的工资单明细 (已修改，调用私有方法)
+     * 查看已提交/已审核的工资单明细
      */
     @GetMapping("/register/detail/{id}")
     public String viewRegisterDetail(@PathVariable Integer id, Model model) {
@@ -318,7 +311,7 @@ public class SalaryMgrController {
         List<SalaryItem> allItems = itemMapper.selectList(null);
         model.addAttribute("allItems", allItems);
 
-        // 2. 构建明细列表，使用私有方法
+        // 2. 构建明细列表
         List<Map<String, Object>> finalDetails = buildFinalDetails(id, allItems);
         model.addAttribute("finalDetails", finalDetails);
 
@@ -326,23 +319,22 @@ public class SalaryMgrController {
     }
 
     // =========================================
-    // 私有辅助方法：提取自原 viewRegisterDetail
+    // 私有辅助方法
     // =========================================
-
     /**
      * 辅助方法：构建工资单明细的表格数据
+     * 【关键修复：根据 ItemName 读取明细表字段】
      */
     private List<Map<String, Object>> buildFinalDetails(Integer registerId, List<SalaryItem> allItems) {
-        // 1. 获取发放详情
+
         List<SalaryRegisterDetail> details = registerDetailMapper.selectList(
                 new QueryWrapper<SalaryRegisterDetail>().eq("Register_ID", registerId)
         );
-
         if (details == null || details.isEmpty()) {
             return List.of();
         }
 
-        // 2. 获取所有员工和职位信息
+        // 1) 取所有 userId
         List<Integer> userIds = details.stream()
                 .map(SalaryRegisterDetail::getUserId)
                 .filter(uid -> uid != null)
@@ -351,55 +343,81 @@ public class SalaryMgrController {
 
         Map<Integer, User> userMap = new HashMap<>();
         Map<Integer, Position> positionMap = new HashMap<>();
+        Map<Integer, String> realNameMap = new HashMap<>();  // <--- 新增：真实姓名映射
 
         if (!userIds.isEmpty()) {
+            // 2) 批量查 user
             List<User> users = userMapper.selectBatchIds(userIds);
-            userMap = users.stream().collect(Collectors.toMap(User::getUserId, u -> u));
+            for (User u : users) userMap.put(u.getUserId(), u);
 
+            // 3) 批量查 position
             List<Integer> positionIds = users.stream()
                     .map(User::getPositionId)
                     .filter(pid -> pid != null)
                     .distinct()
                     .collect(Collectors.toList());
-
             if (!positionIds.isEmpty()) {
                 List<Position> positions = positionMapper.selectBatchIds(positionIds);
-                positionMap = positions.stream().collect(Collectors.toMap(Position::getPositionId, p -> p));
+                for (Position p : positions) positionMap.put(p.getPositionId(), p);
+            }
+
+            // 4) 批量查 personnel file（真实姓名）
+            List<PersonnelFile> files = personnelFileMapper.selectList(
+                    new QueryWrapper<PersonnelFile>()
+                            .in("User_ID", userIds)
+                            .eq("Is_Deleted", 0)   // 你表里有软删字段就加；没有这列就删掉这行
+            );
+            for (PersonnelFile f : files) {
+                realNameMap.put(f.getUserId(), f.getName());
             }
         }
 
-        // 3. 构造最终展示的列表
-        Map<Integer, User> finalUserMap = userMap;
-        Map<Integer, Position> finalPositionMap = positionMap;
+        // 5) 组装最终明细
+        return details.stream().map(d -> {
+            Map<String, Object> row = new HashMap<>();
+            row.put("userId", d.getUserId());
 
-        List<Map<String, Object>> finalDetails = details.stream().map(detail -> {
-            Map<String, Object> empDetail = new HashMap<>();
+            User u = userMap.get(d.getUserId());
+            if (u != null) {
+                // 优先真实姓名；查不到就降级用 username
+                String realName = realNameMap.get(d.getUserId());
+                row.put("userName", realName != null ? realName : u.getUsername());
 
-            User user = finalUserMap.get(detail.getUserId());
-            Position position = (user != null && user.getPositionId() != null)
-                    ? finalPositionMap.get(user.getPositionId())
-                    : null;
-
-            empDetail.put("userId", detail.getUserId());
-            empDetail.put("userName", user != null ? user.getUsername() : "未知用户");
-            empDetail.put("positionName", position != null ? position.getPositionName() : "-");
-            empDetail.put("grossMoney", detail.getGrossMoney());
+                Position p = positionMap.get(u.getPositionId());
+                row.put("positionName", p != null ? p.getPositionName() : "");
+            } else {
+                row.put("userName", "未知用户");
+                row.put("positionName", "");
+            }
 
             Map<Integer, BigDecimal> itemValues = new HashMap<>();
             for (SalaryItem item : allItems) {
-                // 仅示例：这里应根据 T_Salary_Register_Detail 表的实际字段进行赋值
-                if ("基本工资".equals(item.getItemName())) {
-                    itemValues.put(item.getItemId(), detail.getBaseSalary());
+                String itemName = item.getItemName();
+                BigDecimal value = BigDecimal.ZERO;
+
+                if ("基本工资".equals(itemName)) {
+                    value = d.getBaseSalary();
+                } else if ("交通补贴".equals(itemName) || "补贴".equals(itemName)) {
+                    value = d.getTotalSubsidy();
+                } else if ("全勤奖".equals(itemName) || "奖金".equals(itemName) || "KPI 单价".equals(itemName)) {
+                    value = d.getKpiBonus();
+                } else if ("加班费".equals(itemName)) {
+                    value = d.getOvertimePay();
+                } else if ("考勤调整".equals(itemName)) {
+                    value = d.getAttendanceAdjustment();
                 } else {
-                    // 对于其他未明确映射的项目，暂时设置为 0.00
-                    itemValues.put(item.getItemId(), BigDecimal.ZERO);
+                    value = BigDecimal.ZERO;
                 }
+
+                itemValues.put(item.getItemId(), value != null ? value : BigDecimal.ZERO);
             }
-            empDetail.put("itemValues", itemValues);
 
-            return empDetail;
+            row.put("itemValues", itemValues);
+            row.put("grossMoney", d.getGrossMoney());
+            return row;
+
         }).collect(Collectors.toList());
-
-        return finalDetails;
     }
+
+
 }

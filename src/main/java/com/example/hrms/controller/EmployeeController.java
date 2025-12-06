@@ -43,8 +43,8 @@ public class EmployeeController {
         }
 
         // 3. 查询已批准的工资单
-        List<SalaryRegisterDetail> salaryList = registerDetailMapper.selectApprovedDetailsByUserId(user.getUserId());
-        model.addAttribute("salaryList", salaryList);
+       // List<SalaryRegisterDetail> salaryList = registerDetailMapper.selectApprovedDetailsByUserId(user.getUserId());
+        //model.addAttribute("salaryList", salaryList);
 
         return "emp/home";
     }
