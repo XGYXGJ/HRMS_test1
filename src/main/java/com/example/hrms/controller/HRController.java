@@ -64,6 +64,7 @@ public class HRController {
         User currentUser = (User) session.getAttribute("user");
         // 强制设置新员工的机构为当前人事经理所在的机构
         file.setL3OrgId(currentUser.getL3OrgId());
+        file.setAuditStatus("Pending"); // 设置审核状态为待审核
 
         try {
             personnelService.createPersonnelAuto(file, positionId);
@@ -154,5 +155,20 @@ public class HRController {
             }
         }
         return "redirect:/hr/files/" + id;
+    }
+
+    // 7. 重新提交审核
+    @PostMapping("/files/resubmit")
+    public String resubmitPersonnel(@RequestParam Integer id, HttpSession session) {
+        User user = (User) session.getAttribute("user");
+        PersonnelFile file = personnelFileMapper.selectById(id);
+
+        // 权限检查：确保该档案属于当前人事经理的机构
+        if (file != null && file.getL3OrgId().equals(user.getL3OrgId())) {
+            file.setAuditStatus("Pending");
+            personnelFileMapper.updateById(file);
+        }
+
+        return "redirect:/hr/files";
     }
 }

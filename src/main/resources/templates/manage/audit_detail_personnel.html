@@ -1,0 +1,60 @@
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h4>
+            审核档案
+            <small class="text-muted" th:text="'#' + ${file.archiveNo}"></small>
+        </h4>
+        <button type="button"
+                onclick="loadContent('/manage/audit/personnel/list')"
+                class="btn btn-secondary">
+            返回列表
+        </button>
+    </div>
+
+    <div class="card mb-3 border-primary">
+        <div class="card-body bg-light">
+            <div class="row mb-2">
+                <div class="col-md-4">
+                    <strong>姓名:</strong>
+                    <span th:text="${file.name}"></span>
+                </div>
+                <div class="col-md-4">
+                    <strong>性别:</strong>
+                    <span th:text="${file.gender}"></span>
+                </div>
+                <div class="col-md-4">
+                    <strong>手机号:</strong>
+                    <span th:text="${file.phoneNumber}"></span>
+                </div>
+            </div>
+            <div class="row mb-2">
+                <div class="col-md-8">
+                    <strong>身份证号:</strong>
+                    <span th:text="${file.idNumber}"></span>
+                </div>
+                <div class="col-md-4">
+                    <strong>状态:</strong>
+                    <span th:text="${file.auditStatus}"></span>
+                </div>
+            </div>
+             <div class="row mb-2">
+                <div class="col-md-12">
+                    <strong>地址:</strong>
+                    <span th:text="${file.address}"></span>
+                </div>
+            </div>
+
+            <div class="text-end mt-3">
+                <button type="button" class="btn btn-success me-2"
+                        th:onclick="|submitAudit(${file.fileId}, 'pass')|">
+                    <i class="bi bi-check-circle"></i> 通过
+                </button>
+
+                <button type="button" class="btn btn-danger"
+                        th:onclick="|submitAudit(${file.fileId}, 'reject')|">
+                    <i class="bi bi-x-circle"></i> 驳回
+                </button>
+            </div>
+        </div>
+    </div>
+</div>

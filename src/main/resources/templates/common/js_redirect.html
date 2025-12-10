@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Redirecting...</title>
+</head>
+<body>
+<script th:inline="javascript">
+    /*<![CDATA[*/
+    const targetUrl = /*[[${url}]]*/ '/';
+    if (window.top && typeof window.top.loadContent === 'function') {
+        window.top.loadContent(targetUrl);
+    } else {
+        window.location.href = targetUrl;
+    }
+    /*]]>*/
+</script>
+</body>
+</html>

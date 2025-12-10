@@ -1,0 +1,40 @@
+<div class="container-fluid">
+    <h4 class="mb-3">档案审核列表</h4>
+
+    <div th:if="${msg}" class="alert alert-info" th:text="${msg}"></div>
+
+    <div class="table-responsive">
+        <table class="table table-bordered table-hover align-middle">
+            <thead class="table-light">
+            <tr>
+                <th>档案号</th>
+                <th>姓名</th>
+                <th>提交时间</th>
+                <th>状态</th>
+                <th style="width:120px;">操作</th>
+            </tr>
+            </thead>
+
+            <tbody>
+            <tr th:each="file : ${files}">
+                <td th:text="${file.archiveNo}"></td>
+                <td th:text="${file.name}"></td>
+                <td th:text="${#temporals.format(file.creationTime, 'yyyy-MM-dd HH:mm')}"></td>
+                <td>
+                    <span class="badge bg-warning" th:text="${file.auditStatus}">Pending</span>
+                </td>
+                <td>
+                    <button class="btn btn-sm btn-outline-primary"
+                            th:onclick="|loadContent('/manage/audit/detail/personnel/${file.fileId}')|">
+                        查看
+                    </button>
+                </td>
+            </tr>
+
+            <tr th:if="${#lists.isEmpty(files)}">
+                <td colspan="5" class="text-center text-muted">暂无待审核档案</td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+</div>

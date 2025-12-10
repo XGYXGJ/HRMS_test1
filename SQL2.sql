@@ -83,6 +83,18 @@ CREATE TABLE T_Personnel_File (
                                   FOREIGN KEY (L3_Org_ID) REFERENCES T_Organization(Org_ID)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- 如果表已存在，添加新字段
+ALTER TABLE T_Personnel_File
+    ADD COLUMN Audit_Status ENUM('Pending', 'Approved', 'Rejected') NOT NULL DEFAULT 'Pending';
+
+UPDATE T_Personnel_File
+SET Audit_Status = CASE
+                       WHEN status = 0 THEN 'Pending'
+                       WHEN status = 1 THEN 'Approved'
+                       WHEN status = 2 THEN 'Rejected'
+                       ELSE 'Pending' -- 默认情况
+    END;
+
 
 -- ============================================================
 -- 5. 薪酬项目表 (T_Salary_Item)

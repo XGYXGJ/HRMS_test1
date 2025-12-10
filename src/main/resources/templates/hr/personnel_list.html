@@ -30,7 +30,7 @@
     <tr>
         <th>档案号</th>
         <th>姓名</th>
-        <th>职务</th> <!-- 新增表头 -->
+        <th>职务</th>
         <th>手机号</th>
         <th>审核状态</th>
         <th>操作</th>
@@ -40,14 +40,27 @@
     <tr th:each="f : ${files}">
         <td th:text="${f.archiveNo}"></td>
         <td th:text="${f.name}"></td>
-        <td th:text="${f.positionName ?: '-'}"></td> <!-- 新增列 -->
+        <td th:text="${f.positionName ?: '-'}"></td>
         <td th:text="${f.phoneNumber}"></td>
         <td>
-            <!-- ... 状态显示逻辑保持不变 ... -->
+            <span th:switch="${f.auditStatus}">
+                <span th:case="'Pending'" class="badge bg-warning">待审核</span>
+                <span th:case="'Approved'" class="badge bg-success">已批准</span>
+                <span th:case="'Rejected'" class="badge bg-danger">已拒绝</span>
+            </span>
         </td>
         <td>
             <a th:href="@{/hr/files/{id}(id=${f.fileId})}" class="btn btn-sm btn-info">查看</a>
             <a th:href="@{/hr/files/edit/{id}(id=${f.fileId})}" class="btn btn-sm btn-primary">编辑</a>
+
+            <form th:if="${f.auditStatus == 'Rejected'}"
+                  th:action="@{/hr/files/resubmit}"
+                  method="post"
+                  style="display:inline-block;"
+                  onsubmit="return confirm('确定要重新提交审核吗？');">
+                <input type="hidden" name="id" th:value="${f.fileId}" />
+                <button type="submit" class="btn btn-sm btn-warning">重新提交</button>
+            </form>
         </td>
     </tr>
     <tr th:if="${#lists.isEmpty(files)}"><td colspan="6" class="text-center text-muted">暂无数据</td></tr>

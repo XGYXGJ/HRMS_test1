@@ -15,4 +15,7 @@ public interface PersonnelFileMapper extends BaseMapper<PersonnelFile> {
             "LEFT JOIN T_Organization o ON f.L3_Org_ID = o.Org_ID " +
             "WHERE f.Is_Deleted = 0")
     List<Map<String, Object>> selectFilesWithOrgName();
+
+    @Select("SELECT * FROM T_Personnel_File WHERE Audit_Status = #{auditStatus}")
+    List<PersonnelFile> findByAuditStatus(String auditStatus);
 }
