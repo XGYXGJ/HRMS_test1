@@ -165,7 +165,11 @@ CREATE TABLE T_Salary_Register_Master (
                                           Pay_Date DATE NOT NULL COMMENT '薪酬月份',
                                           FOREIGN KEY (L3_Org_ID) REFERENCES T_Organization(Org_ID)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
+-- 让工资单支持草稿状态 Draft
+ALTER TABLE T_Salary_Register_Master
+    MODIFY COLUMN Audit_Status
+        ENUM('Draft','Pending','Approved','Rejected')
+        NOT NULL DEFAULT 'Draft';
 
 -- ============================================================
 -- 9. 薪酬发放详情表 (T_Salary_Register_Detail)
