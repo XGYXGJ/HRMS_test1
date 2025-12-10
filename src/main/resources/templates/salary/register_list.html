@@ -4,6 +4,7 @@
         <button onclick="loadContent('/salary/register/list')" class="btn btn-outline-secondary btn-sm">刷新</button>
     </div>
 
+    <!-- 这两行你原来就有，保留不影响 Modal（只是会多显示一条 alert） -->
     <div th:if="${msg}" class="alert alert-success" th:text="${msg}"></div>
     <div th:if="${error}" class="alert alert-danger" th:text="${error}"></div>
 
@@ -27,6 +28,7 @@
                     <td th:text="${reg.totalPeople}">10</td>
                     <td th:text="${reg.totalAmount}">150000.00</td>
                     <td>
+                        <span th:if="${reg.auditStatus == 'Draft'}" class="badge bg-secondary">草稿</span>
                         <span th:if="${reg.auditStatus == 'Pending'}" class="badge bg-warning text-dark">待审核</span>
                         <span th:if="${reg.auditStatus == 'Approved'}" class="badge bg-success">已发放</span>
                         <span th:if="${reg.auditStatus == 'Rejected'}" class="badge bg-danger">已驳回</span>
@@ -40,4 +42,38 @@
             </table>
         </div>
     </div>
+
+    <!-- =================== Modal + 自动弹窗（放在文件最底部） =================== -->
+
+    <!-- Bootstrap Modal 提示框 -->
+    <div class="modal fade" id="toastModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="toastTitle">提示</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body" id="toastBody"></div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-primary" data-bs-dismiss="modal">知道了</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 自动弹窗脚本：error/msg 有值就弹 -->
+    <script th:inline="javascript">
+        /*<![CDATA[*/
+        const err = /*[[${error}]]*/ null;
+        const msg = /*[[${msg}]]*/ null;
+
+        const text = err || msg;
+        if (text) {
+            document.getElementById('toastBody').innerText = text;
+            document.getElementById('toastTitle').innerText = err ? "操作失败" : "操作成功";
+            const modal = new bootstrap.Modal(document.getElementById('toastModal'));
+            modal.show();
+        }
+        /*]]>*/
+    </script>
 </div>
