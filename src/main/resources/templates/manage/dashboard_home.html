@@ -33,5 +33,20 @@
             </div>
         </div>
 
+        <!-- 待审核档案 -->
+        <div class="col-md-4">
+            <div class="card text-center shadow-sm h-100 border-info">
+                <div class="card-body">
+                    <h5 class="card-title text-info">待审核档案</h5>
+                    <h2 class="display-4" th:text="${pendingPersonnelCount ?: 0}">0</h2>
+                    <p class="text-muted">当前等待您处理的员工档案申请</p>
+                    <button onclick="loadContent('/manage/audit/personnel/list', this)"
+                            class="btn btn-info">
+                        去审核
+                    </button>
+                </div>
+            </div>
+        </div>
+
     </div>
 </div>
