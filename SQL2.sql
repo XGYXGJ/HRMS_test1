@@ -158,6 +158,8 @@ CREATE TABLE T_Salary_Standard_Detail (
                                           FOREIGN KEY (Item_ID) REFERENCES T_Salary_Item(Item_ID)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+ALTER TABLE T_Salary_Register_Master
+    ADD COLUMN Standard_Work_Days INT DEFAULT 22 COMMENT '本月标准工作日天数';
 
 -- ============================================================
 -- 8. 薪酬发放主表 (T_Salary_Register_Master)
@@ -210,6 +212,31 @@ CREATE TABLE T_Salary_Register_Detail (
                                           FOREIGN KEY (User_ID) REFERENCES T_User(User_ID)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- ============================================================
+-- 10. 考勤打卡记录表 (新增)
+-- ============================================================
+DROP TABLE IF EXISTS T_Attendance_Record;
+CREATE TABLE T_Attendance_Record (
+                                     Record_ID INT AUTO_INCREMENT PRIMARY KEY,
+                                     User_ID INT NOT NULL,
+                                     Punch_Time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                                     Punch_Date DATE NOT NULL COMMENT '用于去重，一天一条',
+                                     UNIQUE KEY uk_user_date (User_ID, Punch_Date),
+                                     FOREIGN KEY (User_ID) REFERENCES T_User(User_ID)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- ============================================================
+-- 11. KPI 分项打分记录表 (新增)
+-- ============================================================
+DROP TABLE IF EXISTS T_KPI_Item_Record;
+CREATE TABLE T_KPI_Item_Record (
+                                   Record_ID INT AUTO_INCREMENT PRIMARY KEY,
+                                   Register_Detail_ID INT NOT NULL COMMENT '关联工资单明细',
+                                   Item_Name VARCHAR(50) NOT NULL COMMENT '指标名：质量/效率/协作',
+                                   Weight DECIMAL(3,2) NOT NULL COMMENT '权重 0.0-1.0',
+                                   Score DECIMAL(5,2) NOT NULL DEFAULT 0 COMMENT '得分 0-100',
+                                   FOREIGN KEY (Register_Detail_ID) REFERENCES T_Salary_Register_Detail(Detail_ID) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- ============================================================
 -- 初始化基础数据
