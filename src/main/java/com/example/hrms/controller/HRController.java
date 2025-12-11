@@ -1,7 +1,7 @@
-// src/main/java/com/example/hrms/controller/HRController.java
 package com.example.hrms.controller;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.example.hrms.dto.UserDTO;
 import com.example.hrms.entity.PersonnelFile;
 import com.example.hrms.entity.Position;
 import com.example.hrms.entity.User;
@@ -206,5 +206,17 @@ public class HRController {
 
         model.addAttribute("success", "职位调整成功");
         return "hr/position_change";
+    }
+
+    // 10. 考勤管理页面 (新增)
+    @GetMapping("/attendance")
+    public String attendanceManagement(HttpSession session, Model model) {
+        User hrUser = (User) session.getAttribute("user");
+        if (hrUser == null || hrUser.getL3OrgId() == null) {
+            return "redirect:/login";
+        }
+        List<UserDTO> employees = userMapper.searchUsersByOrg(hrUser.getL3OrgId());
+        model.addAttribute("employees", employees);
+        return "hr/attendance_management";
     }
 }
