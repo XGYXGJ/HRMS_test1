@@ -11,11 +11,18 @@
         body {
             padding: 20px;
         }
-        .fc-daygrid-day.attendance-present {
-            background-color: #d4edda; /* Green for present */
+        /* 自定义打卡记录样式 */
+        .attendance-event {
+            border: none !important;
+            text-align: center;
         }
-        .fc-daygrid-day.attendance-absent {
-            background-color: #f8d7da; /* Red for absent */
+        .attendance-present {
+            background-color: #28a745 !important; /* 深绿色 */
+            color: white !important;
+        }
+        /* 调整 FullCalendar 今天的默认背景色，避免混淆 */
+        .fc-day-today {
+            background-color: #fff3cd !important; /* 浅黄色 */
         }
         .modal-dialog {
             max-width: 800px;
@@ -103,17 +110,6 @@
                 if (currentMode === 'proxy') {
                     handleProxyPunch(info.dateStr);
                 }
-            },
-            dayCellDidMount: function(info) {
-                // Custom rendering for past days
-                const today = new Date();
-                today.setHours(0, 0, 0, 0);
-                if (info.date < today && !info.el.classList.contains('attendance-present')) {
-                    // Only mark as absent if we have loaded events and this day is not present
-                    // But since events are loaded async, this logic might need adjustment.
-                    // For now, let's keep it simple or remove it if it causes confusion.
-                    // info.el.classList.add('attendance-absent');
-                }
             }
         });
         calendar.render();
@@ -147,10 +143,10 @@
                 }
 
                 const events = records.map(record => ({
+                    title: '已打卡', // 显示文字
                     start: record.attendanceDate,
-                    display: 'background',
-                    classNames: ['attendance-present'],
-                    backgroundColor: '#d4edda' // Explicit color
+                    display: 'block', // 块级显示
+                    classNames: ['attendance-event', 'attendance-present']
                 }));
                 calendar.removeAllEvents();
                 calendar.addEventSource(events);
