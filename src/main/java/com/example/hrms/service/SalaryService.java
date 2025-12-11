@@ -105,141 +105,145 @@ public class SalaryService {
     @Transactional
     public void createMonthlyRegister(Integer l3OrgId) {
 
-        LocalDate now = LocalDate.now();
-
-        Long count = registerMasterMapper.selectCount(
-                new QueryWrapper<SalaryRegisterMaster>()
-                        .eq("L3_Org_ID", l3OrgId)
-                        .apply("DATE_FORMAT(Pay_Date, '%Y-%m') = {0}",
-                                now.toString().substring(0, 7))
-        );
-
-        if (count > 0) {
-            throw new RuntimeException("该部门本月工资已登记，请勿重复操作！");
+        // ---------- 0. 参数检查 ----------
+        if (l3OrgId == null) {
+            throw new RuntimeException("L3机构ID不能为空");
         }
 
+        // ---------- 1. 创建主表（Draft） ----------
+        SalaryRegisterMaster master = new SalaryRegisterMaster();
+        master.setL3OrgId(l3OrgId);
+        master.setRegisterTime(LocalDateTime.now());
+        master.setPayDate(LocalDate.now().withDayOfMonth(1));   // 工资月份=当月1号（你原来如果有别的规则可替换）
+        master.setAuditStatus("Draft");                        // ✅ 关键修复：刚生成=草稿
+        master.setTotalPeople(0);
+        master.setTotalAmount(BigDecimal.ZERO);
+
+        registerMasterMapper.insert(master);
+        Integer registerId = master.getRegisterId();
+        if (registerId == null) {
+            throw new RuntimeException("工资主表插入失败，Register_ID为空");
+        }
+
+        // ---------- 2. 查询本机构员工 ----------
         List<User> employees = userMapper.selectList(
-                new QueryWrapper<User>().eq("L3_Org_ID", l3OrgId)
+                new QueryWrapper<User>()
+                        .eq("L3_Org_ID", l3OrgId)
+                        .eq("Is_Deleted", 0)          // 你 User 表有软删字段:contentReference[oaicite:3]{index=3}
+                        .ne("Position_ID", 1)         // 排除管理员/非员工（按你初始化 Position_ID=1 为管理员）
         );
-        if (employees.isEmpty()) return;
 
-        Map<Integer, String> itemTypeMap = itemMapper.selectList(null).stream()
-                .collect(Collectors.toMap(SalaryItem::getItemId, SalaryItem::getItemType));
-
-        SalaryRegisterMaster regMaster = new SalaryRegisterMaster();
-        regMaster.setL3OrgId(l3OrgId);
-        regMaster.setAuditStatus("Pending");
-        regMaster.setPayDate(now);
-        regMaster.setTotalAmount(BigDecimal.ZERO);
-        regMaster.setTotalPeople(0);
-
-        registerMasterMapper.insert(regMaster);
-
-        LocalDate payrollMonth = regMaster.getPayDate();
+        if (employees == null || employees.isEmpty()) {
+            // 没员工也允许生成空草稿
+            return;
+        }
 
         BigDecimal totalAmount = BigDecimal.ZERO;
-        int peopleCount = 0;
 
+        // ---------- 3. 为每个员工生成明细 ----------
         for (User emp : employees) {
 
-            SalaryStandardMaster validStandard =
-                    standardMasterMapper.selectOne(
-                            new QueryWrapper<SalaryStandardMaster>()
-                                    .eq("L3_Org_ID", l3OrgId)
-                                    .eq("Position_ID", emp.getPositionId())
-                                    .eq("Audit_Status", "Approved")
-                                    .orderByDesc("Submission_Time")
-                                    .last("LIMIT 1")
-                    );
+            // 3.1 找“已审批通过”的薪酬标准（按职位+机构）
+            SalaryStandardMaster standard = standardMasterMapper.selectOne(
+                    new QueryWrapper<SalaryStandardMaster>()
+                            .eq("L3_Org_ID", l3OrgId)
+                            .eq("Position_ID", emp.getPositionId())
+                            .eq("Audit_Status", "Approved")
+                            .orderByDesc("Standard_ID")
+                            .last("LIMIT 1")
+            );
 
-            if (validStandard == null) {
+            if (standard == null) {
+                // 没标准就跳过（也可插0薪资明细，看你作业需求）
                 continue;
             }
 
-            List<SalaryStandardDetail> standardDetails =
+            // 3.2 拉标准详情（薪酬项目）
+            List<SalaryStandardDetail> stdDetails =
                     standardDetailMapper.selectList(
                             new QueryWrapper<SalaryStandardDetail>()
-                                    .eq("Standard_ID", validStandard.getStandardId())
+                                    .eq("Standard_ID", standard.getStandardId())
                     );
 
+            // 3.3 计算薪资各构成
             BigDecimal baseSalary = BigDecimal.ZERO;
             BigDecimal totalSubsidy = BigDecimal.ZERO;
-            BigDecimal totalBonusAndKpi = BigDecimal.ZERO;
-            BigDecimal grossMoney = BigDecimal.ZERO;
+            BigDecimal kpiUnitPrice = BigDecimal.ZERO;
+            BigDecimal attendanceBonus = BigDecimal.ZERO;
+            BigDecimal absencePenaltyPerDay = BigDecimal.ZERO;
+            BigDecimal overtimePricePerHour = BigDecimal.ZERO;
 
-            for (SalaryStandardDetail d : standardDetails) {
-                String type = itemTypeMap.get(d.getItemId());
-                if ("Base".equalsIgnoreCase(type)) {
-                    baseSalary = nz(d.getValue());
-                    grossMoney = grossMoney.add(baseSalary);
-                    break;
-                }
+            for (SalaryStandardDetail d : stdDetails) {
+                SalaryItem item = itemMapper.selectById(d.getItemId());
+                if (item == null) continue;
+
+                String name = item.getItemName();
+                BigDecimal val = d.getValue();
+
+                // 你薪酬项目初始化里就有这些名字:contentReference[oaicite:4]{index=4}
+                if ("基本工资".equals(name)) baseSalary = val;
+                else if (name.contains("补贴")) totalSubsidy = totalSubsidy.add(val);
+                else if ("KPI 单价".equals(name) || name.contains("KPI")) kpiUnitPrice = val;
+                else if ("全勤奖".equals(name)) attendanceBonus = val;
+                else if ("旷工扣除".equals(name)) absencePenaltyPerDay = val;
+                else if (name.contains("加班")) overtimePricePerHour = val;
             }
 
+            // 3.4 这里 KPI/考勤/加班先置 0（草稿里再由你刚实现的弹窗/输入框填写）
             BigDecimal kpiUnits = BigDecimal.ZERO;
+            int attendanceCount = 0;
+            BigDecimal overtimeHours = BigDecimal.ZERO;
 
-            for (SalaryStandardDetail d : standardDetails) {
+            // 3.5 计算 KPI_Bonus / Attendance_Adjustment / Overtime_Pay
+            BigDecimal kpiBonus = kpiUnits.multiply(kpiUnitPrice);
+            BigDecimal attendanceAdjustment = attendanceBonus
+                    .subtract(absencePenaltyPerDay.multiply(BigDecimal.valueOf(0))); // 旷工天数这里简化成 0
+            BigDecimal overtimePay = overtimeHours.multiply(overtimePricePerHour);
 
-                String type = itemTypeMap.get(d.getItemId());
-                if (type == null || "Base".equalsIgnoreCase(type)) continue;
+            // 3.6 Gross = 基本 + 补贴 + KPI + 考勤调整 + 加班
+            BigDecimal grossMoney = baseSalary
+                    .add(totalSubsidy)
+                    .add(kpiBonus)
+                    .add(attendanceAdjustment)
+                    .add(overtimePay);
 
-                BigDecimal val = nz(d.getValue());
+            // ---------- 4. 插入明细 ----------
+            SalaryRegisterDetail detail = new SalaryRegisterDetail();
+            detail.setRegisterId(registerId);
+            detail.setUserId(emp.getUserId());
+            detail.setStandardIdUsed(standard.getStandardId());
 
-                if ("Subsidy".equalsIgnoreCase(type)) {
-                    totalSubsidy = totalSubsidy.add(val);
-                    grossMoney = grossMoney.add(val);
-                    continue;
-                }
+            detail.setKpiUnits(kpiUnits);                   // 对应表字段 KPI_Units:contentReference[oaicite:5]{index=5}
+            detail.setAttendanceCount(attendanceCount);     // Attendance_Count:contentReference[oaicite:6]{index=6}
+            detail.setOvertimeHours(overtimeHours);         // Overtime_Hours:contentReference[oaicite:7]{index=7}
 
-                if ("Penalty".equalsIgnoreCase(type)) {
-                    grossMoney = grossMoney.subtract(val);
-                    continue;
-                }
+            detail.setBaseSalary(baseSalary);
+            detail.setTotalSubsidy(totalSubsidy);
+            detail.setKpiBonus(kpiBonus);
+            detail.setAttendanceAdjustment(attendanceAdjustment);
+            detail.setOvertimePay(overtimePay);
+            detail.setGrossMoney(grossMoney);
 
-                if ("Ratio".equalsIgnoreCase(type)) {
-                    BigDecimal ratioAmount = baseSalary.multiply(val);
-                    totalBonusAndKpi = totalBonusAndKpi.add(ratioAmount);
-                    grossMoney = grossMoney.add(ratioAmount);
-                    continue;
-                }
+            detail.setPayrollMonth(master.getPayDate());
 
-                if ("Bonus".equalsIgnoreCase(type)) {
-                    totalBonusAndKpi = totalBonusAndKpi.add(val);
-                    grossMoney = grossMoney.add(val);
-                    continue;
-                }
-
-                if ("KPI".equalsIgnoreCase(type)) {
-                    BigDecimal kpiAmount = val.multiply(kpiUnits);
-                    totalBonusAndKpi = totalBonusAndKpi.add(kpiAmount);
-                    grossMoney = grossMoney.add(kpiAmount);
-                }
-            }
-
-            SalaryRegisterDetail regDetail = new SalaryRegisterDetail();
-            regDetail.setRegisterId(regMaster.getRegisterId());
-            regDetail.setUserId(emp.getUserId());
-            regDetail.setStandardIdUsed(validStandard.getStandardId());
-
-            regDetail.setBaseSalary(baseSalary);
-            regDetail.setTotalSubsidy(totalSubsidy);
-            regDetail.setKpiBonus(totalBonusAndKpi);
-
-            regDetail.setAttendanceAdjustment(BigDecimal.ZERO);
-            regDetail.setOvertimePay(BigDecimal.ZERO);
-
-            regDetail.setGrossMoney(grossMoney);
-            regDetail.setPayrollMonth(payrollMonth);
-
-            registerDetailMapper.insert(regDetail);
+            registerDetailMapper.insert(detail);
 
             totalAmount = totalAmount.add(grossMoney);
-            peopleCount++;
         }
 
-        regMaster.setTotalAmount(totalAmount);
-        regMaster.setTotalPeople(peopleCount);
-        registerMasterMapper.updateById(regMaster);
+        // ---------- 5. 回写主表统计 ----------
+        int totalPeople = Math.toIntExact(
+                registerDetailMapper.selectCount(
+                        new QueryWrapper<SalaryRegisterDetail>().eq("Register_ID", registerId)
+                )
+        );
+
+        SalaryRegisterMaster update = new SalaryRegisterMaster();
+        update.setRegisterId(registerId);
+        update.setTotalPeople(totalPeople);
+        update.setTotalAmount(totalAmount);
+
+        registerMasterMapper.updateById(update);
     }
 
     // -------------------------
@@ -281,4 +285,6 @@ public class SalaryService {
     private BigDecimal nz(BigDecimal v) {
         return v == null ? BigDecimal.ZERO : v;
     }
+
+
 }

@@ -3,8 +3,13 @@
         <h4>待确认工资单草稿明细...</h4>
         <form th:action="'/salary/register/send-for-audit/' + ${master.registerId}" method="post"
               onsubmit="return confirm('确定要将此工资单发送给管理员进行审核吗？')">
+
+            <!-- 发送审核：仅 Draft(草稿) 或 Rejected(驳回) 允许 -->
             <button type="submit" class="btn btn-success"
-                    th:if="${master.auditStatus == 'Pending'}">发送审核</button>
+                    th:if="${master.auditStatus == 'Draft' or master.auditStatus == 'Rejected'}">
+                发送审核
+            </button>
+
             <button type="button" onclick="loadContent('/salary/register/list')" class="btn btn-secondary">返回列表</button>
         </form>
     </div>
@@ -53,4 +58,38 @@
             本月工资单暂无员工明细数据。
         </div>
     </div>
+
+    <!-- =================== Modal + 自动弹窗（放在文件最底部） =================== -->
+
+    <!-- Bootstrap Modal 提示框 -->
+    <div class="modal fade" id="toastModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="toastTitle">提示</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body" id="toastBody"></div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-primary" data-bs-dismiss="modal">知道了</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 自动弹窗脚本：error/msg 有值就弹 -->
+    <script th:inline="javascript">
+        /*<![CDATA[*/
+        const err = /*[[${error}]]*/ null;
+        const msg = /*[[${msg}]]*/ null;
+
+        const text = err || msg;
+        if (text) {
+            document.getElementById('toastBody').innerText = text;
+            document.getElementById('toastTitle').innerText = err ? "操作失败" : "操作成功";
+            const modal = new bootstrap.Modal(document.getElementById('toastModal'));
+            modal.show();
+        }
+        /*]]>*/
+    </script>
 </div>
