@@ -1,71 +1,35 @@
-<!-- src/main/resources/templates/admin/position_list.html -->
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org" lang="zh">
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
-    <title>职位管理 (管理员)</title>
+    <title>职位管理</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
 <body>
-<nav class="navbar navbar-dark bg-dark px-3">
-    <a class="navbar-brand" href="#">HR 管理系统</a>
-    <span class="text-white">欢迎，管理员</span>
-</nav>
-
-<div class="d-flex">
-    <!-- 侧边栏 -->
-    <div class="bg-light border-end" style="width: 250px; min-height: 90vh;" id="adminSidebar">
-        <!-- 侧边栏内容在下方统一更新 -->
-    </div>
-
-    <!-- 主内容区域 -->
-    <div class="p-4 w-100">
-        <h3>职位管理 (全局)</h3>
-        <p class="text-muted">查看系统中所有机构的职位及其在职人数。</p>
-
-        <table class="table table-striped table-hover">
-            <thead class="table-light">
-            <tr>
-                <th>职位ID</th>
-                <th>职位名称</th>
-                <th>所属部门(三级机构)</th>
-                <th>在职人数</th>
-                <th>操作</th>
-            </tr>
-            </thead>
-            <tbody>
-            <tr th:each="pos : ${positions}">
-                <td th:text="${pos.positionId}"></td>
-                <td th:text="${pos.positionName}"></td>
-                <td th:text="${orgNameMap.get(pos.l3OrgId) ?: '未关联机构'}"></td>
-                <td>
-                    <a th:href="@{/admin/positions/{id}/employees(id=${pos.positionId})}" class="btn btn-link p-0">
-                        <span th:text="${employeeCounts.getOrDefault(pos.positionId, 0L)}">0</span>
-                    </a>
-                </td>
-                <td>
-                    <!-- 管理员可扩展编辑或删除功能 -->
-                    <button class="btn btn-sm btn-secondary" disabled>管理</button>
-                </td>
-            </tr>
-            <tr th:if="${#lists.isEmpty(positions)}">
-                <td colspan="5" class="text-center text-muted">系统中暂无职位信息。</td>
-            </tr>
-            </tbody>
-        </table>
-    </div>
+<div class="container mt-4">
+    <h3>职位管理</h3>
+    <table class="table table-striped">
+        <thead>
+        <tr>
+            <th>ID</th>
+            <th>职位名称</th>
+            <th>所属部门</th>
+            <th>人数</th>
+            <th>操作</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="pos : ${positions}">
+            <td th:text="${pos.positionId}"></td>
+            <td th:text="${pos.positionName}"></td>
+            <td th:text="${orgNameMap.get(pos.l3OrgId)}"></td>
+            <td th:text="${employeeCounts.get(pos.positionId) ?: 0}"></td>
+            <td>
+                <a th:href="@{/admin/positions/{id}/employees(id=${pos.positionId})}" class="btn btn-info btn-sm">查看员工</a>
+            </td>
+        </tr>
+        </tbody>
+    </table>
 </div>
-<!-- JS for active sidebar -->
-<script>
-    document.addEventListener("DOMContentLoaded", function(){
-        const sidebarLinks = document.querySelectorAll('#adminSidebar a');
-        const currentPath = window.location.pathname;
-        sidebarLinks.forEach(link => {
-            if (link.getAttribute('href') === currentPath) {
-                link.classList.add('active');
-            }
-        });
-    });
-</script>
 </body>
 </html>

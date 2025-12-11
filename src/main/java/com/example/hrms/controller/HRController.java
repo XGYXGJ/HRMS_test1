@@ -16,7 +16,9 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @Controller
 @RequestMapping("/hr") // 路径保持不变，供人事经理使用
@@ -171,5 +173,38 @@ public class HRController {
         }
 
         return "redirect:/hr/files";
+    }
+
+    // 8. 员工职位调整页面
+    @GetMapping("/positions/change")
+    public String showPositionChangePage(HttpSession session, Model model) {
+        User user = (User) session.getAttribute("user");
+        List<User> users = userMapper.selectList(new QueryWrapper<User>().eq("L3_Org_ID", user.getL3OrgId()));
+        List<Integer> userIds = users.stream().map(User::getUserId).collect(Collectors.toList());
+        List<PersonnelFile> employees = personnelFileMapper.selectList(new QueryWrapper<PersonnelFile>().in("User_ID", userIds));
+        List<Position> positions = positionMapper.selectList(new QueryWrapper<Position>().eq("L3_Org_ID", user.getL3OrgId()));
+
+        model.addAttribute("employees", employees);
+        model.addAttribute("positions", positions);
+        return "hr/position_change";
+    }
+
+    // 9. 处理员工职位调整
+    @PostMapping("/positions/change")
+    public String changePosition(@RequestParam Integer userId, @RequestParam Integer positionId, HttpSession session, Model model) {
+        User user = (User) session.getAttribute("user");
+        User employee = userMapper.selectById(userId);
+
+        // 权限检查
+        if (employee == null || !employee.getL3OrgId().equals(user.getL3OrgId())) {
+            model.addAttribute("error", "无法操作非本机构的员工");
+            return "hr/position_change";
+        }
+
+        employee.setPositionId(positionId);
+        userMapper.updateById(employee);
+
+        model.addAttribute("success", "职位调整成功");
+        return "hr/position_change";
     }
 }

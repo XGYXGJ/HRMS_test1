@@ -56,7 +56,7 @@ public class EmployeeController {
         model.addAttribute("hasPunchedIn", hasPunchedIn);
         model.addAttribute("currentDate", today); // 传递当前日期，用于显示
         // 3. 查询已批准的工资单
-       // List<SalaryRegisterDetail> salaryList = registerDetailMapper.selectApprovedDetailsByUserId(user.getUserId());
+        // List<SalaryRegisterDetail> salaryList = registerDetailMapper.selectApprovedDetailsByUserId(user.getUserId());
         //model.addAttribute("salaryList", salaryList);
 
         return "emp/home";

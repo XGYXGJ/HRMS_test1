@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>员工职位调整</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            padding: 20px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h3>员工职位调整</h3>
+    <a th:href="@{/hr/dashboard}" class="btn btn-secondary mb-3">返回工作台</a>
+
+    <div th:if="${success}" class="alert alert-success" th:text="${success}"></div>
+    <div th:if="${error}" class="alert alert-danger" th:text="${error}"></div>
+
+    <form method="post" th:action="@{/hr/positions/change}">
+        <div class="row">
+            <div class="col-md-6">
+                <div class="mb-3">
+                    <label for="userId" class="form-label">选择员工</label>
+                    <select id="userId" name="userId" class="form-select" required>
+                        <option th:each="employee : ${employees}" th:value="${employee.userId}" th:text="${employee.name}"></option>
+                    </select>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="mb-3">
+                    <label for="positionId" class="form-label">选择新职位</label>
+                    <select id="positionId" name="positionId" class="form-select" required>
+                        <option th:each="position : ${positions}" th:value="${position.positionId}" th:text="${position.positionName}"></option>
+                    </select>
+                </div>
+            </div>
+        </div>
+        <button type="submit" class="btn btn-primary">确认调整</button>
+    </form>
+</div>
+
+</body>
+</html>

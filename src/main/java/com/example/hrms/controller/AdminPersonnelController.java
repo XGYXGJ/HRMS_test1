@@ -11,6 +11,7 @@ import com.example.hrms.mapper.PersonnelFileMapper;
 import com.example.hrms.mapper.PositionMapper;
 import com.example.hrms.mapper.UserMapper;
 import com.example.hrms.service.OrgService;
+import com.example.hrms.service.OrganizationService;
 import com.example.hrms.service.PersonnelService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
@@ -33,6 +34,8 @@ public class AdminPersonnelController {
     private PersonnelFileMapper personnelFileMapper;
     @Autowired
     private UserMapper userMapper;
+    @Autowired
+    private OrganizationService organizationService;
 
     // 1. 档案列表 (管理员视角：查看全部)
     @GetMapping
@@ -69,11 +72,21 @@ public class AdminPersonnelController {
     // 4. 查看档案详情 (管理员无限制)
     @GetMapping("/{id}")
     public String viewFile(@PathVariable Integer id, Model model) {
-        Map<String, Object> file = personnelService.getFileById(id);
+        PersonnelFile file = personnelFileMapper.selectById(id);
         if (file == null) {
             return "redirect:/admin/personnel?error_notfound";
         }
+
+        String orgName = organizationService.getFullOrgName(file.getL3OrgId());
+        User user = userMapper.selectById(file.getUserId());
+        Position position = null;
+        if (user != null) {
+            position = positionMapper.selectById(user.getPositionId());
+        }
+
         model.addAttribute("file", file);
+        model.addAttribute("orgName", orgName);
+        model.addAttribute("positionName", position != null ? position.getPositionName() : "-");
         return "admin/personnel_view";
     }
 
@@ -93,7 +106,9 @@ public class AdminPersonnelController {
         PersonnelFile file = personnelFileMapper.selectById(id);
         if (file != null && file.getUserId() != null) {
             User user = userMapper.selectById(file.getUserId());
-            model.addAttribute("currentPositionId", user.getPositionId());
+            if (user != null) {
+                model.addAttribute("currentPositionId", user.getPositionId());
+            }
         }
 
         model.addAttribute("file", fileData);

@@ -10,6 +10,7 @@ import com.example.hrms.mapper.OrganizationMapper;
 import com.example.hrms.mapper.PersonnelFileMapper;
 import com.example.hrms.mapper.PositionMapper;
 import com.example.hrms.mapper.UserMapper;
+import com.example.hrms.service.OrganizationService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -38,6 +39,9 @@ public class AdminPositionController {
     @Autowired
     private PersonnelFileMapper personnelFileMapper;
 
+    @Autowired
+    private OrganizationService organizationService;
+
     /**
      * 管理员查看所有职位列表
      */
@@ -46,17 +50,11 @@ public class AdminPositionController {
         // 1. 查询所有职位
         List<Position> positions = positionMapper.selectList(null);
 
-        // 2. 批量获取机构名称，用于在列表中显示职位所属部门
-        List<Integer> orgIds = positions.stream()
+        // 2. 批量获取机构名称
+        Map<Integer, String> orgNameMap = positions.stream()
                 .map(Position::getL3OrgId)
                 .distinct()
-                .collect(Collectors.toList());
-
-        Map<Integer, String> orgNameMap = Map.of();
-        if (!orgIds.isEmpty()) {
-            List<Organization> orgs = organizationMapper.selectBatchIds(orgIds);
-            orgNameMap = orgs.stream().collect(Collectors.toMap(Organization::getOrgId, Organization::getOrgName));
-        }
+                .collect(Collectors.toMap(id -> id, id -> organizationService.getFullOrgName(id)));
         model.addAttribute("orgNameMap", orgNameMap);
 
 
@@ -73,7 +71,7 @@ public class AdminPositionController {
         }
 
         model.addAttribute("positions", positions);
-        return "admin/position_list"; // 指向管理员专用的职位列表视图
+        return "admin/position_list";
     }
 
     /**
@@ -86,7 +84,7 @@ public class AdminPositionController {
             return "redirect:/admin/positions?error=not_found";
         }
 
-        // 管理员视角，直接查询该职位下的所有用户
+        // 直接查询该职位下的所有用户
         List<User> users = userMapper.selectList(new QueryWrapper<User>()
                 .eq("Position_ID", positionId)
                 .eq("Is_Deleted", 0));
@@ -100,6 +98,6 @@ public class AdminPositionController {
 
         model.addAttribute("position", position);
         model.addAttribute("employeeFiles", employeeFiles);
-        return "admin/position_employees"; // 指向管理员专用的员工列表视图
+        return "admin/position_employees";
     }
 }

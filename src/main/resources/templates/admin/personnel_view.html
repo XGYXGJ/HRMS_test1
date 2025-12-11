@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>查看人事档案</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            padding: 20px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h3>查看人事档案</h3>
+        <a th:href="@{/admin/personnel}" class="btn btn-secondary">返回列表</a>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            档案号: <span th:text="${file.archiveNo}"></span>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <p><strong>姓名:</strong> <span th:text="${file.name}"></span></p>
+                    <p><strong>性别:</strong> <span th:text="${file.gender}"></span></p>
+                    <p><strong>手机号:</strong> <span th:text="${file.phoneNumber}"></span></p>
+                    <p><strong>身份证号:</strong> <span th:text="${file.idNumber}"></span></p>
+                </div>
+                <div class="col-md-6">
+                    <p><strong>所在机构:</strong> <span th:text="${orgName}"></span></p>
+                    <p><strong>职位:</strong> <span th:text="${positionName}"></span></p>
+                    <p><strong>审核状态:</strong>
+                        <span th:switch="${file.auditStatus}">
+                            <span th:case="'Pending'" class="badge bg-warning">待审核</span>
+                            <span th:case="'Approved'" class="badge bg-success">已批准</span>
+                            <span th:case="'Rejected'" class="badge bg-danger">已拒绝</span>
+                        </span>
+                    </p>
+                    <p><strong>创建时间:</strong> <span th:text="${#temporals.format(file.creationTime, 'yyyy-MM-dd HH:mm')}"></span></p>
+                </div>
+            </div>
+            <p><strong>地址:</strong> <span th:text="${file.address}"></span></p>
+        </div>
+        <div class="card-footer text-end">
+            <a th:href="@{/admin/personnel/edit/{id}(id=${file.fileId})}" class="btn btn-primary">编辑</a>
+        </div>
+    </div>
+</div>
+
+</body>
+</html>
