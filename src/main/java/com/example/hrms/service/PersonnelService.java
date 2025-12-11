@@ -28,31 +28,7 @@ public class PersonnelService {
 
     // 列表与搜索 (保持不变)
     public List<Map<String, Object>> listFiles(Integer l3OrgId, String q) {
-        List<Map<String, Object>> all = fileMapper.selectFilesWithOrgName();
-        List<Map<String, Object>> filtered = all;
-        if (l3OrgId != null) {
-            filtered = filtered.stream().filter(m -> {
-                Object v = m.get("L3_Org_ID");
-                if (v == null) v = m.get("l3_org_id");
-                if (v == null) return false;
-                try {
-                    return Integer.parseInt(String.valueOf(v)) == l3OrgId;
-                } catch (Exception ex) {
-                    return false;
-                }
-            }).collect(Collectors.toList());
-        }
-        if (q == null || q.trim().isEmpty()) return filtered;
-        String key = q.trim().toLowerCase();
-        return filtered.stream().filter(m -> {
-            String name = safe(m, "Name", "name");
-            String phone = safe(m, "Phone_Number", "phoneNumber", "phone_number");
-            String archive = safe(m, "Archive_No", "archiveNo");
-            String account = safe(m, "Username", "username", "account");
-            String orgName = safe(m, "orgName", "ORGNAME");
-            String combined = (name + " " + phone + " " + archive + " " + account + " " + orgName).toLowerCase();
-            return combined.contains(key);
-        }).collect(Collectors.toList());
+        return fileMapper.selectFilesWithOrgName(l3OrgId, q);
     }
 
     private String safe(Map<String, Object> m, String... keys) {

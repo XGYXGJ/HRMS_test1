@@ -10,19 +10,29 @@
             pf.Name AS name,
             pf.Phone_Number AS phoneNumber,
             pf.Audit_Status AS auditStatus,
-            pf.L3_Org_ID AS L3_Org_ID,
+            u.L3_Org_ID AS L3_Org_ID,  -- 使用 User 表的 Org ID
             o.Org_Name AS orgName,
-            pos.Position_Name AS positionName   -- 【新增】查询职位名称
+            pos.Position_Name AS positionName
         FROM
             T_Personnel_File pf
                 LEFT JOIN
-            T_Organization o ON pf.L3_Org_ID = o.Org_ID
+            T_User u ON pf.User_ID = u.User_ID
                 LEFT JOIN
-            T_User u ON pf.User_ID = u.User_ID  -- 【新增】关联用户表
+            T_Organization o ON u.L3_Org_ID = o.Org_ID -- 关联 User 表的 Org ID
                 LEFT JOIN
-            T_Position pos ON u.Position_ID = pos.Position_ID -- 【新增】关联职位表
-        WHERE
+            T_Position pos ON u.Position_ID = pos.Position_ID
+        <where>
             pf.Is_Deleted = 0
+            <if test="l3OrgId != null">
+                AND u.L3_Org_ID = #{l3OrgId} -- 使用 User 表的 Org ID 进行过滤
+            </if>
+            <if test="q != null and q != ''">
+                AND (pf.Name LIKE CONCAT('%', #{q}, '%')
+                OR pf.Archive_No LIKE CONCAT('%', #{q}, '%')
+                OR o.Org_Name LIKE CONCAT('%', #{q}, '%')
+                OR pos.Position_Name LIKE CONCAT('%', #{q}, '%'))
+            </if>
+        </where>
         ORDER BY
             pf.Creation_Time DESC
     </select>

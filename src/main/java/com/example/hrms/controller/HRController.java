@@ -10,11 +10,14 @@ import com.example.hrms.mapper.PositionMapper;
 import com.example.hrms.mapper.UserMapper;
 import com.example.hrms.service.PersonnelService;
 import jakarta.servlet.http.HttpSession;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -23,6 +26,8 @@ import java.util.stream.Collectors;
 @Controller
 @RequestMapping("/hr") // 路径保持不变，供人事经理使用
 public class HRController {
+
+    private static final Logger logger = LoggerFactory.getLogger(HRController.class);
 
     @Autowired
     private PersonnelService personnelService;
@@ -43,8 +48,10 @@ public class HRController {
     public String personnelListPage(@RequestParam(value = "q", required = false) String q,
                                     HttpSession session, Model model) {
         User user = (User) session.getAttribute("user");
-        // 强制使用当前用户的 l3OrgId 进行过滤
-        model.addAttribute("files", personnelService.listFiles(user.getL3OrgId(), q));
+        Integer l3OrgId = user != null ? user.getL3OrgId() : null;
+        logger.info("Fetching files for HR user. l3OrgId: {}", l3OrgId);
+        
+        model.addAttribute("files", personnelService.listFiles(l3OrgId, q));
         model.addAttribute("q", q);
         return "hr/personnel_list";
     }
@@ -179,7 +186,21 @@ public class HRController {
     @GetMapping("/positions/change")
     public String showPositionChangePage(HttpSession session, Model model) {
         User user = (User) session.getAttribute("user");
-        List<User> users = userMapper.selectList(new QueryWrapper<User>().eq("L3_Org_ID", user.getL3OrgId()));
+
+        // 获取要排除的职位ID
+        List<String> excludedPositions = Arrays.asList("人事经理", "薪酬经理");
+        List<Integer> excludedPositionIds = positionMapper.selectList(
+                new QueryWrapper<Position>().in("Position_Name", excludedPositions)
+        ).stream().map(Position::getPositionId).collect(Collectors.toList());
+
+        // 查询用户，排除特定职位
+        QueryWrapper<User> userQuery = new QueryWrapper<User>()
+                .eq("L3_Org_ID", user.getL3OrgId());
+        if (!excludedPositionIds.isEmpty()) {
+            userQuery.notIn("Position_ID", excludedPositionIds);
+        }
+        List<User> users = userMapper.selectList(userQuery);
+
         List<Integer> userIds = users.stream().map(User::getUserId).collect(Collectors.toList());
         List<PersonnelFile> employees = personnelFileMapper.selectList(new QueryWrapper<PersonnelFile>().in("User_ID", userIds));
         List<Position> positions = positionMapper.selectList(new QueryWrapper<Position>().eq("L3_Org_ID", user.getL3OrgId()));

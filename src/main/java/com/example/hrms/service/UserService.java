@@ -5,6 +5,7 @@ import java.util.List;
 
 public interface UserService {
     List<UserDTO> getUsersByOrgAndPosition(Integer orgId, Integer positionId);
+    List<UserDTO> searchUsers(String name, String position, Integer orgId);
     List<UserDTO> searchUsers(String query);
     boolean transferEmployee(Integer employeeId, Integer targetOrgId, Integer targetPositionId);
 }

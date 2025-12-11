@@ -40,7 +40,101 @@
         </div>
         <button type="submit" class="btn btn-primary">确认调整</button>
     </form>
+
+    <hr class="my-4">
+
+    <div>
+        <h3>员工选择列表</h3>
+        <div class="mb-3">
+            <input id="search-input" placeholder="按姓名/当前岗位搜索" class="form-control d-inline-block" style="width: 300px;" />
+            <button id="search-btn" class="btn btn-primary">搜索</button>
+        </div>
+
+        <table class="table table-striped" id="employee-table">
+            <thead>
+            <tr>
+                <th>档案号</th>
+                <th>姓名</th>
+                <th>当前岗位</th>
+                <th>操作</th>
+            </tr>
+            </thead>
+            <tbody>
+            <!-- 员工数据将通过API动态加载 -->
+            </tbody>
+        </table>
+    </div>
 </div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const searchBtn = document.getElementById('search-btn');
+        const searchInput = document.getElementById('search-input');
+        const employeeTableBody = document.querySelector('#employee-table tbody');
+
+        function fetchEmployees(name, position) {
+            let url = '/api/employees';
+            const params = new URLSearchParams();
+            if (name) params.append('name', name);
+            if (position) params.append('position', position);
+            if (params.toString()) {
+                url += '?' + params.toString();
+            }
+
+            fetch(url)
+                .then(response => response.json())
+                .then(data => {
+                    employeeTableBody.innerHTML = '';
+                    data.forEach(employee => {
+                        const row = `
+                            <tr>
+                                <td>${employee.archiveNo}</td>
+                                <td>${employee.name}</td>
+                                <td>${employee.position}</td>
+                                <td>
+                                    <button class="btn btn-sm btn-primary" onclick="selectEmployee(${employee.userId}, '${employee.name}')">选择</button>
+                                </td>
+                            </tr>
+                        `;
+                        employeeTableBody.insertAdjacentHTML('beforeend', row);
+                    });
+                })
+                .catch(error => console.error('Error fetching employees:', error));
+        }
+
+        searchBtn.addEventListener('click', () => {
+            const searchTerm = searchInput.value.trim();
+            // A simple way to distinguish between name and position, you might need a more robust solution
+            const isPosition = searchTerm.includes('师') || searchTerm.includes('经理') || searchTerm.includes('专员');
+            if (isPosition) {
+                fetchEmployees(null, searchTerm);
+            } else {
+                fetchEmployees(searchTerm, null);
+            }
+        });
+
+        // Initial load
+        fetchEmployees();
+    });
+
+    function selectEmployee(userId, name) {
+        const select = document.getElementById('userId');
+        // Check if the employee is already in the dropdown
+        let found = false;
+        for (let i = 0; i < select.options.length; i++) {
+            if (select.options[i].value == userId) {
+                select.selectedIndex = i;
+                found = true;
+                break;
+            }
+        }
+        // If not, add them
+        if (!found) {
+            const newOption = new Option(name, userId, true, true);
+            select.add(newOption);
+        }
+    }
+</script>
 
 </body>
 </html>

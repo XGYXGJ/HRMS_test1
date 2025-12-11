@@ -58,4 +58,28 @@
         WHERE
             u.L3_Org_ID = #{orgId}
     </select>
+
+    <select id="searchUsersByNameAndPosition" resultType="com.example.hrms.dto.UserDTO">
+        SELECT
+            u.User_ID as userId,
+            pf.Archive_No as archiveNo,
+            pf.Name as name,
+            p.Position_Name as position
+        FROM
+            T_User u
+        JOIN
+            T_Personnel_File pf ON u.User_ID = pf.User_ID
+        LEFT JOIN
+            T_Position p ON u.Position_ID = p.Position_ID
+        <where>
+            u.L3_Org_ID = #{orgId}
+            AND (p.Position_Name IS NULL OR p.Position_Name NOT IN ('人事经理', '薪酬经理'))
+            <if test="name != null and name != ''">
+                AND pf.Name LIKE CONCAT('%', #{name}, '%')
+            </if>
+            <if test="position != null and position != ''">
+                AND p.Position_Name LIKE CONCAT('%', #{position}, '%')
+            </if>
+        </where>
+    </select>
 </mapper>

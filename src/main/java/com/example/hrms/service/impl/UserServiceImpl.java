@@ -27,6 +27,11 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    public List<UserDTO> searchUsers(String name, String position, Integer orgId) {
+        return userMapper.searchUsersByNameAndPosition(name, position, orgId);
+    }
+
+    @Override
     public boolean transferEmployee(Integer employeeId, Integer targetOrgId, Integer targetPositionId) {
         User user = userMapper.selectById(employeeId);
         if (user == null) {

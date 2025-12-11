@@ -71,9 +71,8 @@ public class AdminController {
 
     // 4. 档案列表查询页面 (实现模糊查询)
     @GetMapping("/files")
-    public String listFiles(Model model) {
-        // 这里直接调用Mapper演示，实际应在Service层
-        model.addAttribute("files", fileMapper.selectFilesWithOrgName());
+    public String listFiles(@RequestParam(value = "q", required = false) String q, Model model) {
+        model.addAttribute("files", fileMapper.selectFilesWithOrgName(null, q));
         return "admin/file_list";
     }
 
