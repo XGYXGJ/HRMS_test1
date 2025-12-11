@@ -1,95 +1,213 @@
 <div class="container-fluid">
+    <!-- 顶部标题 + 操作按钮 -->
     <div class="d-flex justify-content-between align-items-center mb-3">
-        <h4>待确认工资单草稿明细...</h4>
-        <form th:action="'/salary/register/send-for-audit/' + ${master.registerId}" method="post"
-              onsubmit="return confirm('确定要将此工资单发送给管理员进行审核吗？')">
+        <h4>待确认工资单草稿明细</h4>
 
-            <!-- 发送审核：仅 Draft(草稿) 或 Rejected(驳回) 允许 -->
-            <button type="submit" class="btn btn-success"
-                    th:if="${master.auditStatus == 'Draft' or master.auditStatus == 'Rejected'}">
-                发送审核
+        <div class="d-flex gap-2">
+            <!-- 草稿/驳回状态下才允许发送审核 -->
+            <form th:action="'/salary/register/send-for-audit/' + ${master.registerId}" method="post"
+                  th:if="${master.auditStatus == 'Draft' or master.auditStatus == 'Rejected'}"
+                  onsubmit="return confirm('确定要将此工资单发送给管理员进行审核吗？发送后将无法修改！')">
+                <button type="submit" class="btn btn-success">发送审核</button>
+            </form>
+
+            <button type="button" onclick="loadContent('/salary/register/list')" class="btn btn-secondary">
+                返回列表
             </button>
-
-            <button type="button" onclick="loadContent('/salary/register/list')" class="btn btn-secondary">返回列表</button>
-        </form>
+        </div>
     </div>
 
+    <!-- 工资单主信息 -->
     <div th:if="${master}" class="alert alert-info py-2 small">
         <strong>单号:</strong> <span th:text="${master.registerId}"></span> |
-        <strong>发放日期:</strong> <span th:text="${master.payDate}"></span> |
-        <strong>审核状态:</strong>
-        <span class="badge bg-warning text-dark">待确认/待审核</span>
+        <strong>月份:</strong> <span th:text="${master.payDate}"></span> |
+        <strong>标准工作天数:</strong> <span th:text="${master.standardWorkDays}"></span> |
+        <strong>审核状态:</strong> <span class="badge bg-warning text-dark">待确认/待审核</span>
+        <br>
+        <strong>总人数:</strong> <span th:text="${master.totalPeople}"></span> 人 |
+        <strong>总金额:</strong>
+        <span th:text="${#numbers.formatDecimal(master.totalAmount, 1, 'COMMA', 2, 'POINT')}"></span>
+        CNY (请在录入绩效后关注此金额变化)
     </div>
 
+    <!-- 员工明细表 -->
     <div class="card shadow-sm">
         <div class="card-body p-0">
             <div class="table-responsive">
-                <table class="table table-bordered table-hover mb-0">
+                <table class="table table-bordered table-hover mb-0 small">
                     <thead class="table-light">
                     <tr>
-                        <th>员工编号</th>
+                        <th>员工ID</th>
                         <th>姓名</th>
                         <th>职位</th>
+                        <th>基本工资</th>
+                        <th>总补贴</th>
 
-                        <th th:each="item : ${allItems}" th:text="${item.itemName}">薪酬项目名称</th>
+                        <th class="text-center">实际出勤天数</th>
+                        <th class="text-center">考勤奖惩</th>
+                        <th class="text-center">最终KPI系数</th>
 
-                        <th>实发金额 (应发合计)</th>
+                        <th>绩效奖金</th>
+                        <th class="text-primary">实发工资 (Gross)</th>
+                        <th class="text-center">操作</th>
                     </tr>
                     </thead>
                     <tbody>
-                    <tr th:each="emp : ${finalDetails}">
-                        <td th:text="${emp.userId}">101</td>
-                        <td th:text="${emp.userName}">张三</td>
-                        <td th:text="${emp.positionName}">软件工程师</td>
+                    <tr th:each="emp : ${employeeDetails}">
+                        <td th:text="${emp.userId}"></td>
+                        <td th:text="${emp.userName}"></td>
+                        <td th:text="${emp.positionName}"></td>
 
-                        <td th:each="item : ${allItems}">
-                            <span th:with="value=${emp.itemValues.get(item.itemId)}">
-                                <span th:text="${value != null ? #numbers.formatDecimal(value, 1, 'COMMA', 2, 'POINT') : '0.00'}">0.00</span>
-                            </span>
+                        <!-- 基本工资 -->
+                        <td th:text="${#numbers.formatDecimal(emp.baseSalary, 1, 'COMMA', 2, 'POINT')}"></td>
+                        <!-- 总补贴 -->
+                        <td th:text="${#numbers.formatDecimal(emp.totalSubsidy, 1, 'COMMA', 2, 'POINT')}"></td>
+
+                        <!-- 实际出勤天数 -->
+                        <td class="text-center" th:text="${emp.attendanceCount}"></td>
+
+                        <!-- 考勤奖惩 -->
+                        <td class="text-center"
+                            th:text="${#numbers.formatDecimal(emp.attendanceAdjustment, 1, 'COMMA', 2, 'POINT')}"
+                            th:classappend="${emp.attendanceAdjustment} >= 0 ? ' text-success' : ' text-danger'">
                         </td>
 
-                        <td class="fw-bold text-success" th:text="${#numbers.formatDecimal(emp.grossMoney, 1, 'COMMA', 2, 'POINT')}">5500.00</td>
+                        <!-- 最终 KPI 系数：对应 detail.getKpiUnits() -->
+                        <td class="text-center" th:text="${emp.kpiUnits}"></td>
+
+                        <!-- 绩效奖金：对应 detail.getKpiBonus() -->
+                        <td th:text="${#numbers.formatDecimal(emp.kpiBonus, 1, 'COMMA', 2, 'POINT')}"></td>
+
+                        <!-- 实发工资 Gross：对应 detail.getGrossMoney() -->
+                        <td class="text-primary fw-bold"
+                            th:text="${#numbers.formatDecimal(emp.grossMoney, 1, 'COMMA', 2, 'POINT')}"></td>
+
+                        <!-- 操作：录入绩效按钮 -->
+                        <td class="text-center">
+                            <button class="btn btn-sm btn-info"
+                                    th:onclick="|openKPIModal(${emp.detailId}, ${master.registerId})|">
+                                录入绩效
+                            </button>
+                        </td>
                     </tr>
                     </tbody>
+
                 </table>
             </div>
         </div>
-        <div th:if="${#lists.isEmpty(finalDetails)}" class="card-footer text-center text-muted">
+
+        <!-- 无员工明细时提示 -->
+        <div th:if="${#lists.isEmpty(employeeDetails)}" class="card-footer text-center text-muted">
             本月工资单暂无员工明细数据。
         </div>
     </div>
+</div>
 
-    <!-- =================== Modal + 自动弹窗（放在文件最底部） =================== -->
-
-    <!-- Bootstrap Modal 提示框 -->
-    <div class="modal fade" id="toastModal" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content">
+<!-- KPI 录入弹窗 -->
+<div class="modal fade" id="kpiModal" tabindex="-1" aria-labelledby="kpiModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form action="/salary/register/save-kpi" method="post">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="toastTitle">提示</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    <h5 class="modal-title" id="kpiModalLabel">录入员工 KPI 评分</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"
+                            aria-label="Close"></button>
                 </div>
-                <div class="modal-body" id="toastBody"></div>
+
+                <div class="modal-body">
+                    <!-- 隐藏字段：工资明细ID & 工资单ID -->
+                    <input type="hidden" name="detailId" id="modalDetailId">
+                    <input type="hidden" name="registerId" id="modalRegisterId">
+
+                    <p class="text-muted small">
+                        请输入各项指标分数 (0-100)，系统将按权重自动计算最终 KPI 系数，
+                        并自动重新计算该员工工资。
+                    </p>
+
+                    <div class="mb-3">
+                        <label class="form-label">工作质量 (权重 40%)</label>
+                        <input type="number"
+                               name="scores"
+                               class="form-control"
+                               placeholder="0-100"
+                               required
+                               min="0" max="100" step="0.01">
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">工作效率 (权重 30%)</label>
+                        <input type="number"
+                               name="scores"
+                               class="form-control"
+                               placeholder="0-100"
+                               required
+                               min="0" max="100" step="0.01">
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">团队协作 (权重 30%)</label>
+                        <input type="number"
+                               name="scores"
+                               class="form-control"
+                               placeholder="0-100"
+                               required
+                               min="0" max="100" step="0.01">
+                    </div>
+
+                    <div class="alert alert-warning small mt-3">
+                        <strong>考勤门槛规则：</strong>
+                        若员工当月实际出勤天数
+                        &lt; <span th:text="${master.standardWorkDays * 0.8}"></span> 天
+                        （标准天数的 80%），最终 KPI 系数将自动打 <strong>8 折</strong>。
+                    </div>
+                </div>
+
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-primary" data-bs-dismiss="modal">知道了</button>
+                    <button type="submit" class="btn btn-primary">保存并计算工资</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
                 </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- 通用提示弹窗（显示 msg / error） -->
+<div class="modal fade" id="toastModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="toastTitle">提示</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"
+                        aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="toastBody"></div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" data-bs-dismiss="modal">知道了</button>
             </div>
         </div>
     </div>
-
-    <!-- 自动弹窗脚本：error/msg 有值就弹 -->
-    <script th:inline="javascript">
-        /*<![CDATA[*/
-        const err = /*[[${error}]]*/ null;
-        const msg = /*[[${msg}]]*/ null;
-
-        const text = err || msg;
-        if (text) {
-            document.getElementById('toastBody').innerText = text;
-            document.getElementById('toastTitle').innerText = err ? "操作失败" : "操作成功";
-            const modal = new bootstrap.Modal(document.getElementById('toastModal'));
-            modal.show();
-        }
-        /*]]>*/
-    </script>
 </div>
+
+<!-- 脚本：展示提示 & 打开KPI弹窗 -->
+<script th:inline="javascript">
+    /*<![CDATA[*/
+    const err = /*[[${error}]]*/ null;
+    const msg = /*[[${msg}]]*/ null;
+
+    const text = err || msg;
+    if (text) {
+        document.getElementById('toastBody').innerText = text;
+        document.getElementById('toastTitle').innerText = err ? '操作失败' : '操作成功';
+        const modal = new bootstrap.Modal(document.getElementById('toastModal'));
+        modal.show();
+    }
+
+    // KPI 模态框打开函数
+    function openKPIModal(detailId, registerId) {
+        document.getElementById('modalDetailId').value = detailId;
+        document.getElementById('modalRegisterId').value = registerId;
+        const modal = new bootstrap.Modal(document.getElementById('kpiModal'));
+        modal.show();
+    }
+    /*]]>*/
+</script>

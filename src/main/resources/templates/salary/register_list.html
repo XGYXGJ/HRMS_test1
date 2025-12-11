@@ -34,8 +34,19 @@
                         <span th:if="${reg.auditStatus == 'Rejected'}" class="badge bg-danger">已驳回</span>
                     </td>
                     <td>
-                        <button th:onclick="'loadContent(\'/salary/register/detail/' + ${reg.registerId} + '\')'"
-                                class="btn btn-sm btn-primary">查看明细</button>
+                        <!-- 草稿 & 驳回：进入可编辑草稿详情（可以录入KPI） -->
+                        <button th:if="${reg.auditStatus == 'Draft' or reg.auditStatus == 'Rejected'}"
+                                th:onclick="'loadContent(\'/salary/register/draft-detail/' + ${reg.registerId} + '\')'"
+                                class="btn btn-sm btn-warning">
+                            录入绩效 / 确认
+                        </button>
+
+                        <!-- 待审核 & 已发放：进入只读详情 -->
+                        <button th:if="${reg.auditStatus == 'Pending' or reg.auditStatus == 'Approved'}"
+                                th:onclick="'loadContent(\'/salary/register/detail/' + ${reg.registerId} + '\')'"
+                                class="btn btn-sm btn-primary">
+                            查看明细
+                        </button>
                     </td>
                 </tr>
                 </tbody>

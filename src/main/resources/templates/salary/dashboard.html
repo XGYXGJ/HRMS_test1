@@ -75,6 +75,7 @@
     </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
     /**
      * 切换输入框的可用状态
@@ -174,6 +175,15 @@
             form.onsubmit = function(event) {
                 event.preventDefault(); // 阻止默认提交
 
+                const parentModal = form.closest('.modal.show');
+                if (parentModal) {
+                    let modalInstance = bootstrap.Modal.getInstance(parentModal);
+                    if (!modalInstance) {
+                        modalInstance = new bootstrap.Modal(parentModal);
+                    }
+                    modalInstance.hide();
+                }
+
                 // 如果有 confirm 属性，先确认
                 if (form.getAttribute('onsubmit_confirm')) {
                     if (!confirm(form.getAttribute('onsubmit_confirm'))) return;
@@ -215,6 +225,13 @@
                         loading.style.display = 'none';
                         contentArea.style.opacity = '1';
 
+                        // ========= 新增：兜底清理所有可能残留的 Modal 遮罩 =========
+                        document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
+                        document.body.classList.remove('modal-open');
+                        document.body.style.removeProperty('padding-right');
+                        document.body.style.removeProperty('overflow');
+                        // ========= 新增结束 =========
+
                         // 递归绑定新内容中的表单事件 & Checkbox 事件
                         bindFormEvents();
                         bindItemCheckboxEvents();
@@ -240,6 +257,31 @@
             });
         });
     }
+
+
+</script>
+
+<script th:inline="javascript">
+    /*<![CDATA[*/
+    const err = /*[[${error}]]*/ null;
+    const msg = /*[[${msg}]]*/ null;
+
+    const text = err || msg;
+    if (text) {
+        document.getElementById('toastBody').innerText = text;
+        document.getElementById('toastTitle').innerText = err ? '操作失败' : '操作成功';
+        const modal = new bootstrap.Modal(document.getElementById('toastModal'));
+        modal.show();
+    }
+
+    // KPI 模态框打开函数
+    function openKPIModal(detailId, registerId) {
+        document.getElementById('modalDetailId').value = detailId;
+        document.getElementById('modalRegisterId').value = registerId;
+        const modal = new bootstrap.Modal(document.getElementById('kpiModal'));
+        modal.show();
+    }
+    /*]]>*/
 </script>
 </body>
 </html>

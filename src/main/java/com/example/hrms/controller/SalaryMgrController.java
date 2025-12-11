@@ -15,10 +15,7 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Controller
@@ -200,42 +197,88 @@ public class SalaryMgrController {
     // 工资登记与发放 (新的工作流程)
     // =========================================
 
+    @GetMapping("/register/pre-create")
+    public String preCreateRegisterPage() {
+        return "salary/register_pre_create";
+    }
     /**
      * 【新方法 1】执行一键登记，并跳转到新生成的草稿详情页。
      * 替换了原有的 /register/create (POST) 方法
      */
-    @GetMapping("/register/pre-create")
-    public String preCreateRegister(HttpSession session, Model model) {
-        User salaryUser = (User) session.getAttribute("user");
-        if (salaryUser == null || salaryUser.getL3OrgId() == null) {
-            model.addAttribute("error", "用户会话或组织信息缺失。");
-            return listRegisters(session, model);
+    @PostMapping("/register/create")
+    public String createRegister(@RequestParam("days") Integer days,
+                                 HttpSession session,
+                                 RedirectAttributes ra) {
+
+        User user = (User) session.getAttribute("user");
+        if (user == null || user.getL3OrgId() == null) {
+            ra.addFlashAttribute("error", "用户未登录或机构信息缺失。");
+            return "redirect:/login";
         }
-        Integer l3OrgId = salaryUser.getL3OrgId();
+
+        if (days == null || days <= 0 || days > 31) {
+            ra.addFlashAttribute("error", "请录入有效的本月标准工作天数 (1-31)。");
+            return "redirect:/salary/register/pre-create";
+        }
 
         try {
-            // 1. 调用 Service 执行登记逻辑（生成 Draft 工资单）
-            salaryService.createMonthlyRegister(l3OrgId);
-
-            // 2. 查询本月最新生成的单据 ID (刚生成应为 Draft)
-            SalaryRegisterMaster latestRegister = registerMasterMapper.selectOne(
-                    new QueryWrapper<SalaryRegisterMaster>()
-                            .eq("L3_Org_ID", l3OrgId)
-                            .eq("Audit_Status", "Draft")
-                            .orderByDesc("Register_ID")
-                            .last("LIMIT 1")
-            );
-
-            if (latestRegister != null) {
-                return "redirect:/salary/register/draft-detail/" + latestRegister.getRegisterId();
-            } else {
-                model.addAttribute("error", "工资单生成失败，请重试或检查是否有员工信息。");
-                return listRegisters(session, model);
-            }
-        } catch (RuntimeException e) {
-            model.addAttribute("error", "生成工资单时发生错误: " + e.getMessage());
-            return listRegisters(session, model);
+            // 调用 Service 层的新方法，传入标准工作天数
+            salaryService.createMonthlyRegister(user.getL3OrgId(), days);
+            ra.addFlashAttribute("msg", "工资单草稿已生成，请进入详情页录入绩效。");
+        } catch (Exception e) {
+            ra.addFlashAttribute("error", "生成工资单失败: " + e.getMessage());
         }
+
+        // 简单跳转到列表页，让用户自己选择最新的 Draft
+        return "redirect:/salary/register/list";
+    }
+
+    // ----------------------------------------------------------------
+    // 新增：录入 KPI 分数并重算工资
+    // ----------------------------------------------------------------
+    /**
+     * 处理薪酬经理提交的 KPI 分数，并触发工资重算。
+     * @param detailId 正在编辑的工资明细 ID
+     * @param scores KPI 分项得分 (这里假设按顺序传递：质量, 效率, 协作)
+     * @param registerId 工资主表 ID，用于跳转回详情页
+     */
+    @PostMapping("/register/save-kpi")
+    public String saveKPI(@RequestParam("detailId") Integer detailId,
+                          @RequestParam("scores") List<BigDecimal> scores,
+                          @RequestParam("registerId") Integer registerId,
+                          RedirectAttributes ra) {
+
+        if (scores.size() < 3) {
+            ra.addFlashAttribute("error", "KPI 分项分数不足，请至少录入3项分数。");
+            return "redirect:/salary/register/draft-detail/" + registerId;
+        }
+
+        try {
+            // 构造 KPI Item 列表 (硬编码示例：质量40%, 效率30%, 协作30%)
+            List<KPIItemRecord> items = new ArrayList<>();
+            items.add(createKPI("工作质量", new BigDecimal("0.4"), scores.get(0)));
+            items.add(createKPI("工作效率", new BigDecimal("0.3"), scores.get(1)));
+            items.add(createKPI("团队协作", new BigDecimal("0.3"), scores.get(2)));
+
+            // 调用 Service 层进行保存和重算
+            salaryService.updateEmployeeKPI(detailId, items);
+            ra.addFlashAttribute("msg", "绩效分数已更新，工资已自动重新计算。");
+        } catch (Exception e) {
+            ra.addFlashAttribute("error", "录入绩效失败: " + e.getMessage());
+        }
+
+        return "redirect:/salary/register/draft-detail/" + registerId;
+    }
+
+    /**
+     * 辅助方法：创建 KPI Item 实体
+     */
+    private KPIItemRecord createKPI(String name, BigDecimal weight, BigDecimal score) {
+        KPIItemRecord r = new KPIItemRecord();
+        r.setItemName(name);
+        r.setWeight(weight);
+        r.setScore(score);
+        return r;
     }
 
     /**
@@ -253,12 +296,13 @@ public class SalaryMgrController {
         List<SalaryItem> allItems = itemMapper.selectList(null);
         model.addAttribute("allItems", allItems);
 
-        // 2. 构建明细列表，使用私有方法
+        // 2. 构建明细列表
         List<Map<String, Object>> finalDetails = buildFinalDetails(id, allItems);
-        model.addAttribute("finalDetails", finalDetails);
 
-        // 加载新的模板，该模板包含发送审核按钮
-        return "salary/register_detail_draft"; // 需要新建此 HTML 文件
+        // 【修正】前端模板 register_detail_draft.html 使用的是 ${employeeDetails}
+        model.addAttribute("employeeDetails", finalDetails);
+
+        return "salary/register_detail_draft";
     }
 
     /**
@@ -368,12 +412,13 @@ public class SalaryMgrController {
         }
         model.addAttribute("master", master);
 
-        // 1. 获取所有薪酬项目 (用于表头)
         List<SalaryItem> allItems = itemMapper.selectList(null);
         model.addAttribute("allItems", allItems);
 
-        // 2. 构建明细列表，使用私有方法
         List<Map<String, Object>> finalDetails = buildFinalDetails(id, allItems);
+
+        // 原有只读详情页模板 register_detail.html 使用的是 ${finalDetails}
+        // 保持一致，无需修改
         model.addAttribute("finalDetails", finalDetails);
 
         return "salary/register_detail";
@@ -393,7 +438,7 @@ public class SalaryMgrController {
         );
 
         if (details == null || details.isEmpty()) {
-            return List.of();
+            return List.of(); // 返回空列表而不是 null，防止前端报错
         }
 
         // 2. 获取所有员工和职位信息
@@ -426,7 +471,7 @@ public class SalaryMgrController {
         Map<Integer, User> finalUserMap = userMap;
         Map<Integer, Position> finalPositionMap = positionMap;
 
-        List<Map<String, Object>> finalDetails = details.stream().map(detail -> {
+        return details.stream().map(detail -> {
             Map<String, Object> empDetail = new HashMap<>();
 
             User user = finalUserMap.get(detail.getUserId());
@@ -434,26 +479,39 @@ public class SalaryMgrController {
                     ? finalPositionMap.get(user.getPositionId())
                     : null;
 
+            // --- 基础信息 ---
             empDetail.put("userId", detail.getUserId());
             empDetail.put("userName", user != null ? user.getUsername() : "未知用户");
             empDetail.put("positionName", position != null ? position.getPositionName() : "-");
+
+            // --- 【关键修正】添加草稿页和KPI功能所需的字段 ---
+            empDetail.put("detailId", detail.getDetailId()); // 必须！用于KPI录入弹窗
+            empDetail.put("attendanceCount", detail.getAttendanceCount()); // 必须！显示出勤天数
+            empDetail.put("kpiUnits", detail.getKpiUnits()); // 必须！显示KPI系数
+            empDetail.put("attendanceAdjustment", detail.getAttendanceAdjustment());
+            empDetail.put("kpiBonus", detail.getKpiBonus());
+            empDetail.put("baseSalary", detail.getBaseSalary());
+            empDetail.put("totalSubsidy", detail.getTotalSubsidy());
             empDetail.put("grossMoney", detail.getGrossMoney());
 
+            // --- 动态列 (兼容旧模板) ---
             Map<Integer, BigDecimal> itemValues = new HashMap<>();
-            for (SalaryItem item : allItems) {
-                // 仅示例：这里应根据 T_Salary_Register_Detail 表的实际字段进行赋值
-                if ("基本工资".equals(item.getItemName())) {
-                    itemValues.put(item.getItemId(), detail.getBaseSalary());
-                } else {
-                    // 对于其他未明确映射的项目，暂时设置为 0.00
-                    itemValues.put(item.getItemId(), BigDecimal.ZERO);
+            // 如果您的 allItems 为空，这里的逻辑不会执行，但为了兼容性保留
+            if (allItems != null) {
+                for (SalaryItem item : allItems) {
+                    // 这里可以根据实际情况完善映射，但在草稿页我们主要用上面的直接字段
+                    if ("基本工资".equals(item.getItemName())) {
+                        itemValues.put(item.getItemId(), detail.getBaseSalary());
+                    } else if ("全勤奖".equals(item.getItemName())) {
+                        itemValues.put(item.getItemId(), detail.getAttendanceAdjustment()); // 示例映射
+                    } else {
+                        itemValues.put(item.getItemId(), BigDecimal.ZERO);
+                    }
                 }
             }
             empDetail.put("itemValues", itemValues);
 
             return empDetail;
         }).collect(Collectors.toList());
-
-        return finalDetails;
     }
 }

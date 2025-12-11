@@ -1,0 +1,15 @@
+<div class="container mt-5">
+    <div class="card" style="max-width: 500px; margin: auto;">
+        <div class="card-header">生成本月工资单</div>
+        <div class="card-body">
+            <form action="/salary/register/create" method="post">
+                <div class="mb-3">
+                    <label class="form-label">本月标准工作天数 (Standard Work Days)</label>
+                    <input type="number" name="days" class="form-control" value="22" required min="1" max="31">
+                    <div class="form-text">用于计算全勤奖和缺勤扣款。</div>
+                </div>
+                <button type="submit" class="btn btn-primary w-100">生成草稿</button>
+            </form>
+        </div>
+    </div>
+</div>

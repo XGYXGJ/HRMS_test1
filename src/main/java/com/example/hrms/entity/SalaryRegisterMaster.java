@@ -47,4 +47,7 @@ public class SalaryRegisterMaster {
 
     @TableField("Pay_Date")
     private LocalDate payDate;             // 薪酬月份/发放月份
+
+    @TableField("Standard_Work_Days")
+    private Integer standardWorkDays; // 标准工作天数
 }
