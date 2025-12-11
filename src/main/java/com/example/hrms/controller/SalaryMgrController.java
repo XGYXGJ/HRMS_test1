@@ -29,6 +29,7 @@ public class SalaryMgrController {
     @Autowired private SalaryRegisterDetailMapper registerDetailMapper;
     @Autowired private SalaryStandardMasterMapper standardMasterMapper; // 注入标准Mapper用于查重
     @Autowired private PositionMapper positionMapper; // 注入职位Mapper
+    @Autowired private PersonnelFileMapper personnelFileMapper; //用于取姓名
 
     // =========================================
     // 基础页面 (保持不变)
@@ -378,6 +379,49 @@ public class SalaryMgrController {
         return "redirect:/salary/register/list";
     }
 
+    /**
+     * 【新方法 4】撤回待审核工资单，恢复为草稿状态。
+     * 仅允许从 Pending -> Draft，撤回后跳转到草稿详情页，方便继续录入绩效。
+     */
+    @PostMapping("/register/recall/{id}")
+    public String recallRegister(@PathVariable Integer id,
+                                 HttpSession session,
+                                 RedirectAttributes redirectAttributes) {
+        User salaryUser = (User) session.getAttribute("user");
+        if (salaryUser == null) {
+            redirectAttributes.addFlashAttribute("error", "用户会话信息缺失，请重新登录。");
+            return "redirect:/salary/register/detail/" + id;
+        }
+
+        // 0) 查询当前工资单
+        SalaryRegisterMaster current = registerMasterMapper.selectById(id);
+        if (current == null) {
+            redirectAttributes.addFlashAttribute("error", "工资单不存在，无法撤回。");
+            return "redirect:/salary/register/list";
+        }
+
+        String status = current.getAuditStatus();
+
+        // 1) 只允许 Pending 状态撤回
+        if (!"Pending".equals(status)) {
+            redirectAttributes.addFlashAttribute("error", "仅待审核状态的工资单允许撤回。");
+            return "redirect:/salary/register/detail/" + id;
+        }
+
+        // 2) 执行撤回：Pending -> Draft
+        SalaryRegisterMaster update = new SalaryRegisterMaster();
+        update.setRegisterId(id);
+        update.setAuditStatus("Draft");
+        // 如有需要，可以在这里清理审核人信息，例如：
+        // update.setAuditorId(null);
+        // update.setAuditTime(null);
+
+        registerMasterMapper.updateById(update);
+
+        // 3) 提示并跳转到可编辑草稿详情页，方便继续录入绩效
+        redirectAttributes.addFlashAttribute("msg", "工资单已撤回为草稿，可以继续录入绩效。");
+        return "redirect:/salary/register/draft-detail/" + id;
+    }
 
     /**
      * 查询历史工资单列表 (保持不变)
@@ -429,48 +473,61 @@ public class SalaryMgrController {
     // =========================================
 
     /**
-     * 辅助方法：构建工资单明细的表格数据
+     * 构建工资单明细展示数据：
+     * - username 来自 T_User.Username
+     * - userName 来自 T_Personnel_File.Name
+     * - 保险扣除 insuranceFee / 实发工资 grossMoney 等都从明细表带出
      */
     private List<Map<String, Object>> buildFinalDetails(Integer registerId, List<SalaryItem> allItems) {
         // 1. 获取发放详情
         List<SalaryRegisterDetail> details = registerDetailMapper.selectList(
                 new QueryWrapper<SalaryRegisterDetail>().eq("Register_ID", registerId)
         );
-
         if (details == null || details.isEmpty()) {
-            return List.of(); // 返回空列表而不是 null，防止前端报错
+            return List.of();
         }
 
-        // 2. 获取所有员工和职位信息
+        // 2. 准备所有相关的 userId
         List<Integer> userIds = details.stream()
                 .map(SalaryRegisterDetail::getUserId)
-                .filter(uid -> uid != null)
+                .filter(Objects::nonNull)
                 .distinct()
                 .collect(Collectors.toList());
 
-        Map<Integer, User> userMap = new HashMap<>();
-        Map<Integer, Position> positionMap = new HashMap<>();
+        Map<Integer, User> userMap = Collections.emptyMap();
+        Map<Integer, Position> positionMap = Collections.emptyMap();
+        Map<Integer, PersonnelFile> personnelMap = Collections.emptyMap();
 
         if (!userIds.isEmpty()) {
+            // 2-1 用户基本信息
             List<User> users = userMapper.selectBatchIds(userIds);
-            userMap = users.stream().collect(Collectors.toMap(User::getUserId, u -> u));
+            userMap = users.stream()
+                    .collect(Collectors.toMap(User::getUserId, u -> u));
 
-            List<Integer> positionIds = users.stream()
+            // 2-2 职位信息
+            Set<Integer> positionIds = users.stream()
                     .map(User::getPositionId)
-                    .filter(pid -> pid != null)
-                    .distinct()
-                    .collect(Collectors.toList());
-
+                    .filter(Objects::nonNull)
+                    .collect(Collectors.toSet());
             if (!positionIds.isEmpty()) {
                 List<Position> positions = positionMapper.selectBatchIds(positionIds);
-                positionMap = positions.stream().collect(Collectors.toMap(Position::getPositionId, p -> p));
+                positionMap = positions.stream()
+                        .collect(Collectors.toMap(Position::getPositionId, p -> p));
             }
+
+            // 2-3 人员档案（姓名）
+            List<PersonnelFile> pFiles = personnelFileMapper.selectList(
+                    new QueryWrapper<PersonnelFile>().in("User_ID", userIds)
+            );
+            personnelMap = pFiles.stream()
+                    .collect(Collectors.toMap(PersonnelFile::getUserId, pf -> pf));
         }
 
-        // 3. 构造最终展示的列表
         Map<Integer, User> finalUserMap = userMap;
         Map<Integer, Position> finalPositionMap = positionMap;
+        Map<Integer, PersonnelFile> finalPersonnelMap = personnelMap;
 
+        // 3. 组装返回给前端的 List<Map>
         return details.stream().map(detail -> {
             Map<String, Object> empDetail = new HashMap<>();
 
@@ -478,32 +535,38 @@ public class SalaryMgrController {
             Position position = (user != null && user.getPositionId() != null)
                     ? finalPositionMap.get(user.getPositionId())
                     : null;
+            PersonnelFile pf = finalPersonnelMap.get(detail.getUserId());
 
             // --- 基础信息 ---
             empDetail.put("userId", detail.getUserId());
-            empDetail.put("userName", user != null ? user.getUsername() : "未知用户");
-            empDetail.put("positionName", position != null ? position.getPositionName() : "-");
+            // 员工账号：T_User.Username
+            empDetail.put("username", user != null ? user.getUsername() : "-");
+            // 员工姓名：T_Personnel_File.Name，兜底用账号
+            empDetail.put("userName",
+                    pf != null ? pf.getName()
+                            : (user != null ? user.getUsername() : "未知用户"));
+            empDetail.put("positionName",
+                    position != null ? position.getPositionName() : "-");
 
-            // --- 【关键修正】添加草稿页和KPI功能所需的字段 ---
-            empDetail.put("detailId", detail.getDetailId()); // 必须！用于KPI录入弹窗
-            empDetail.put("attendanceCount", detail.getAttendanceCount()); // 必须！显示出勤天数
-            empDetail.put("kpiUnits", detail.getKpiUnits()); // 必须！显示KPI系数
+            // --- 草稿页 / KPI / 保险 等字段 ---
+            empDetail.put("detailId", detail.getDetailId());
+            empDetail.put("attendanceCount", detail.getAttendanceCount());
+            empDetail.put("kpiUnits", detail.getKpiUnits());
             empDetail.put("attendanceAdjustment", detail.getAttendanceAdjustment());
             empDetail.put("kpiBonus", detail.getKpiBonus());
             empDetail.put("baseSalary", detail.getBaseSalary());
             empDetail.put("totalSubsidy", detail.getTotalSubsidy());
+            empDetail.put("insuranceFee", detail.getInsuranceFee());//获取保险的
             empDetail.put("grossMoney", detail.getGrossMoney());
 
-            // --- 动态列 (兼容旧模板) ---
+            // --- 动态项目列 (兼容原来的 register_detail.html) ---
             Map<Integer, BigDecimal> itemValues = new HashMap<>();
-            // 如果您的 allItems 为空，这里的逻辑不会执行，但为了兼容性保留
             if (allItems != null) {
                 for (SalaryItem item : allItems) {
-                    // 这里可以根据实际情况完善映射，但在草稿页我们主要用上面的直接字段
                     if ("基本工资".equals(item.getItemName())) {
                         itemValues.put(item.getItemId(), detail.getBaseSalary());
                     } else if ("全勤奖".equals(item.getItemName())) {
-                        itemValues.put(item.getItemId(), detail.getAttendanceAdjustment()); // 示例映射
+                        itemValues.put(item.getItemId(), detail.getAttendanceAdjustment());
                     } else {
                         itemValues.put(item.getItemId(), BigDecimal.ZERO);
                     }

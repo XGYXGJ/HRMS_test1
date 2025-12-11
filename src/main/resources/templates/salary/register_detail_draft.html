@@ -1,25 +1,40 @@
 <div class="container-fluid">
     <!-- 顶部标题 + 操作按钮 -->
     <div class="d-flex justify-content-between align-items-center mb-3">
-        <h4>待确认工资单草稿明细</h4>
+        <h4>
+            工资单明细
+            <small class="text-muted" th:text="'(月份: ' + ${master.payDate} + ')'"></small>
+        </h4>
 
         <div class="d-flex gap-2">
-            <!-- 草稿/驳回状态下才允许发送审核 -->
-            <form th:action="'/salary/register/send-for-audit/' + ${master.registerId}" method="post"
+            <!-- 发送审核：仅 Draft(草稿) 或 Rejected(驳回) 允许 -->
+            <form th:action="'/salary/register/send-for-audit/' + ${master.registerId}"
+                  method="post"
                   th:if="${master.auditStatus == 'Draft' or master.auditStatus == 'Rejected'}"
-                  onsubmit="return confirm('确定要将此工资单发送给管理员进行审核吗？发送后将无法修改！')">
+                  onsubmit="return confirm('确定要将此工资单发送给管理员进行审核吗？')">
                 <button type="submit" class="btn btn-success">发送审核</button>
             </form>
 
-            <button type="button" onclick="loadContent('/salary/register/list')" class="btn btn-secondary">
+            <!-- 撤回：仅 Pending(待审核) 状态显示，将单据撤回为草稿 -->
+            <form th:action="'/salary/register/recall/' + ${master.registerId}"
+                  method="post"
+                  th:if="${master.auditStatus == 'Pending'}"
+                  onsubmit="return confirm('确定要撤回该工资单并变回草稿状态吗？撤回后可以重新修改绩效。')">
+                <button type="submit" class="btn btn-warning">撤回到草稿</button>
+            </form>
+
+            <button onclick="loadContent('/salary/register/list')" class="btn btn-secondary">
                 返回列表
             </button>
         </div>
     </div>
 
+
     <!-- 工资单主信息 -->
     <div th:if="${master}" class="alert alert-info py-2 small">
-        <strong>单号:</strong> <span th:text="${master.registerId}"></span> |
+        <strong>单号:</strong>
+        <!-- 显示 PAY+日期+两位流水号 -->
+        <span th:text="${master.registerCode}">PAY2025121101</span> |
         <strong>月份:</strong> <span th:text="${master.payDate}"></span> |
         <strong>标准工作天数:</strong> <span th:text="${master.standardWorkDays}"></span> |
         <strong>审核状态:</strong> <span class="badge bg-warning text-dark">待确认/待审核</span>
@@ -37,7 +52,9 @@
                 <table class="table table-bordered table-hover mb-0 small">
                     <thead class="table-light">
                     <tr>
-                        <th>员工ID</th>
+                        <!-- 员工账号来自 T_User.Username -->
+                        <th>员工账号</th>
+                        <!-- 姓名来自 T_Personnel_File.Name -->
                         <th>姓名</th>
                         <th>职位</th>
                         <th>基本工资</th>
@@ -48,15 +65,21 @@
                         <th class="text-center">最终KPI系数</th>
 
                         <th>绩效奖金</th>
-                        <th class="text-primary">实发工资 (Gross)</th>
+                        <!-- 下面保险 / 实发工资在需求 2 里继续用到 -->
+                        <th class="text-danger">保险扣除</th>
+                        <th class="text-primary">实发工资</th>
                         <th class="text-center">操作</th>
                     </tr>
                     </thead>
                     <tbody>
                     <tr th:each="emp : ${employeeDetails}">
-                        <td th:text="${emp.userId}"></td>
-                        <td th:text="${emp.userName}"></td>
-                        <td th:text="${emp.positionName}"></td>
+                        <!-- 员工账号：T_User.Username -->
+                        <td th:text="${emp.username}">emp01</td>
+
+                        <!-- 员工姓名：T_Personnel_File.Name -->
+                        <td th:text="${emp.userName}">张三</td>
+
+                        <td th:text="${emp.positionName}">软件工程师</td>
 
                         <!-- 基本工资 -->
                         <td th:text="${#numbers.formatDecimal(emp.baseSalary, 1, 'COMMA', 2, 'POINT')}"></td>
@@ -72,15 +95,19 @@
                             th:classappend="${emp.attendanceAdjustment} >= 0 ? ' text-success' : ' text-danger'">
                         </td>
 
-                        <!-- 最终 KPI 系数：对应 detail.getKpiUnits() -->
+                        <!-- 最终 KPI 系数 -->
                         <td class="text-center" th:text="${emp.kpiUnits}"></td>
 
-                        <!-- 绩效奖金：对应 detail.getKpiBonus() -->
+                        <!-- 绩效奖金 -->
                         <td th:text="${#numbers.formatDecimal(emp.kpiBonus, 1, 'COMMA', 2, 'POINT')}"></td>
 
-                        <!-- 实发工资 Gross：对应 detail.getGrossMoney() -->
+                        <!-- 保险扣除金额（后端计算好的 emp.insuranceFee） -->
+                        <td class="text-danger"
+                            th:text="${#numbers.formatDecimal(emp.insuranceFee, 1, 'COMMA', 2, 'POINT')}">0.00</td>
+
+                        <!-- 实发工资：后端按新公式算好的 emp.grossMoney -->
                         <td class="text-primary fw-bold"
-                            th:text="${#numbers.formatDecimal(emp.grossMoney, 1, 'COMMA', 2, 'POINT')}"></td>
+                            th:text="${#numbers.formatDecimal(emp.grossMoney, 1, 'COMMA', 2, 'POINT')}">0.00</td>
 
                         <!-- 操作：录入绩效按钮 -->
                         <td class="text-center">
@@ -91,7 +118,6 @@
                         </td>
                     </tr>
                     </tbody>
-
                 </table>
             </div>
         </div>

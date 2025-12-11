@@ -27,7 +27,7 @@ public class SalaryRegisterDetail {
     private BigDecimal attendanceAdjustment;
     private BigDecimal overtimePay;
     private BigDecimal grossMoney;
-
+    private BigDecimal insuranceFee;
     private LocalDate payrollMonth;
 
     // ===== getter/setter 省略的话自己IDE生成 =====
@@ -73,4 +73,7 @@ public class SalaryRegisterDetail {
 
     public LocalDate getPayrollMonth() { return payrollMonth; }
     public void setPayrollMonth(LocalDate payrollMonth) { this.payrollMonth = payrollMonth; }
+
+    public BigDecimal getInsuranceFee() { return insuranceFee; }
+    public void setInsuranceFee(BigDecimal insuranceFee) { this.insuranceFee = insuranceFee; }
 }

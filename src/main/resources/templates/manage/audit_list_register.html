@@ -9,6 +9,7 @@
             <tr>
                 <th>工资单编号</th>
                 <th>提交人</th>
+                <th>所在机构</th>
                 <th>提交时间</th>
                 <th>状态</th>
                 <th style="width:120px;">操作</th>
@@ -19,10 +20,13 @@
             <tr th:each="reg : ${registers}">
                 <td th:text="${reg.registerCode}">REG2025</td>
 
-                <!-- 改为从 submitterMap 取用户名 -->
+                <!-- 提交人：从 submitterMap 取用户名 -->
                 <td th:text="${submitterMap.get(reg.submitterId)?.username}">张三</td>
 
-                <!-- 改为 registerTime -->
+                <!-- 所在机构：从 orgNameMap 取机构名 -->
+                <td th:text="${orgNameMap.get(reg.l3OrgId)}">研发部三组</td>
+
+                <!-- 提交时间：登记时间 / 提交时间 -->
                 <td th:text="${#temporals.format(reg.registerTime, 'yyyy-MM-dd HH:mm')}"></td>
 
                 <td>
@@ -37,9 +41,10 @@
             </tr>
 
             <tr th:if="${#lists.isEmpty(registers)}">
-                <td colspan="5" class="text-center text-muted">暂无待审核工资单</td>
+                <td colspan="6" class="text-center text-muted">暂无待审核工资单</td>
             </tr>
             </tbody>
+
         </table>
     </div>
 </div>

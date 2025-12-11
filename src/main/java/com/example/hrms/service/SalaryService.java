@@ -13,6 +13,7 @@ import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.YearMonth;
+import java.time.format.DateTimeFormatter;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -118,12 +119,35 @@ public class SalaryService {
         master.setL3OrgId(l3OrgId);
         master.setRegisterTime(LocalDateTime.now());
         LocalDate now = LocalDate.now();
+        // 工资月份统一用当月 1 号
         master.setPayDate(now.withDayOfMonth(1));
         master.setAuditStatus("Draft");
         master.setTotalPeople(0);
         master.setTotalAmount(BigDecimal.ZERO);
         master.setStandardWorkDays(standardWorkDays); // 保存标准天数
 
+        // 生成薪资发放单号：PAY + yyyyMMdd + 两位流水号
+        String dateStr = now.format(DateTimeFormatter.ofPattern("yyyyMMdd"));
+        String prefix = "PAY" + dateStr;
+
+        QueryWrapper<SalaryRegisterMaster> codeQuery = new QueryWrapper<>();
+        codeQuery.likeRight("Register_Code", prefix);
+        codeQuery.orderByDesc("Register_Code");
+        codeQuery.last("LIMIT 1");
+
+        SalaryRegisterMaster lastRegister = registerMasterMapper.selectOne(codeQuery);
+        String newCode;
+        if (lastRegister != null && lastRegister.getRegisterCode() != null) {
+            String lastCode = lastRegister.getRegisterCode();
+            String seqStr = lastCode.substring(prefix.length());
+            int seq = Integer.parseInt(seqStr);
+            newCode = prefix + String.format("%02d", seq + 1);
+        } else {
+            newCode = prefix + "01";
+        }
+        master.setRegisterCode(newCode);
+
+        // 插入主表，拿到自增的 Register_ID
         registerMasterMapper.insert(master);
         Integer registerId = master.getRegisterId();
 
@@ -134,7 +158,6 @@ public class SalaryService {
                         .eq("Is_Deleted", 0)
                         .ne("Position_ID", 1) // 排除管理员
         );
-
         if (employees == null || employees.isEmpty()) return;
 
         BigDecimal totalAmount = BigDecimal.ZERO;
@@ -159,9 +182,10 @@ public class SalaryService {
             // B. 提取标准基数
             BigDecimal baseSalary = BigDecimal.ZERO;
             BigDecimal totalSubsidy = BigDecimal.ZERO;
-            BigDecimal kpiUnitPrice = BigDecimal.ZERO;   // KPI 每分多少钱 (或系数基数)
+            BigDecimal kpiUnitPrice = BigDecimal.ZERO;       // KPI 每分多少钱 (或系数基数)
             BigDecimal attendanceBonusStd = BigDecimal.ZERO; // 全勤奖标准
             BigDecimal absencePenaltyDay = BigDecimal.ZERO;  // 缺勤一天扣多少
+            BigDecimal insuranceRatioSum = BigDecimal.ZERO;  // 保险系数汇总
 
             for (SalaryStandardDetail d : stdDetails) {
                 SalaryItem item = itemMapper.selectById(d.getItemId());
@@ -169,15 +193,23 @@ public class SalaryService {
                 String name = item.getItemName();
                 BigDecimal val = d.getValue();
 
-                if ("基本工资".equals(name)) baseSalary = val;
-                else if (name.contains("补贴")) totalSubsidy = totalSubsidy.add(val);
-                else if (name.contains("KPI")) kpiUnitPrice = val;
-                else if ("全勤奖".equals(name)) attendanceBonusStd = val;
-                else if ("旷工扣除".equals(name)) absencePenaltyDay = val;
+                if ("基本工资".equals(name)) {
+                    baseSalary = val;
+                } else if (name.contains("补贴")) {
+                    totalSubsidy = totalSubsidy.add(val);
+                } else if (name.contains("KPI")) {
+                    kpiUnitPrice = val;
+                } else if ("全勤奖".equals(name)) {
+                    attendanceBonusStd = val;
+                } else if ("旷工扣除".equals(name)) {
+                    absencePenaltyDay = val;
+                } else if (name.contains("保险")) {
+                    // 保险项目：value 为系数，后面统一乘以工资基数
+                    insuranceRatioSum = insuranceRatioSum.add(val);
+                }
             }
 
-            // C. 自动计算考勤 (核心修改)
-            // 统计该员工当月的打卡天数
+            // C. 自动计算考勤：统计该员工当月打卡天数
             YearMonth ym = YearMonth.from(master.getPayDate());
             LocalDate start = ym.atDay(1);
             LocalDate end = ym.atEndOfMonth();
@@ -187,9 +219,8 @@ public class SalaryService {
                             .eq("User_ID", emp.getUserId())
                             .between("Punch_Date", start, end)
             );
-            int actualDays = actualDaysLong.intValue();
+            int actualDays = (actualDaysLong != null) ? actualDaysLong.intValue() : 0;
 
-            // 考勤奖惩逻辑
             BigDecimal attendanceAdjustment = BigDecimal.ZERO;
             if (actualDays >= standardWorkDays) {
                 // 全勤：给全勤奖
@@ -197,31 +228,45 @@ public class SalaryService {
             } else {
                 // 缺勤：扣款 = (标准-实际) * 单日扣款
                 int missedDays = standardWorkDays - actualDays;
-                attendanceAdjustment = absencePenaltyDay.multiply(BigDecimal.valueOf(missedDays)).negate();
+                if (missedDays > 0) {
+                    attendanceAdjustment = absencePenaltyDay
+                            .multiply(BigDecimal.valueOf(missedDays))
+                            .negate();
+                }
             }
 
             // D. 初始化 KPI (默认为 0，等待经理录入)
-            // 默认 KPI Units 为 1.0 (或者 0，看策略，这里设为 0 等待打分)
             BigDecimal kpiUnits = BigDecimal.ZERO;
-            BigDecimal kpiBonus = BigDecimal.ZERO; // 暂时为 0
+            BigDecimal kpiBonus = BigDecimal.ZERO; // 录入 KPI 后再更新
 
-            // E. 计算总额
-            // Gross = Base + Subsidy + KPI(0) + AttendanceAdj
-            BigDecimal grossMoney = baseSalary.add(totalSubsidy).add(kpiBonus).add(attendanceAdjustment);
+            // E. 计算保险扣除 & 实发工资
+            // 保险 = 工资基数 * 保险系数之和，这里先用基本工资作为基数
+            BigDecimal insuranceBase = baseSalary;
+            BigDecimal insuranceFee = insuranceBase
+                    .multiply(insuranceRatioSum)
+                    .setScale(2, RoundingMode.HALF_UP);
+
+            // 实发工资 = 基本工资 + 补贴 + 绩效奖金 - 保险 + 考勤奖惩
+            BigDecimal grossMoney = baseSalary
+                    .add(totalSubsidy)
+                    .add(kpiBonus)
+                    .add(attendanceAdjustment)
+                    .subtract(insuranceFee);
 
             // F. 存入明细
             SalaryRegisterDetail detail = new SalaryRegisterDetail();
-            detail.setRegisterId(registerId);
+            detail.setRegisterId(registerId);          // 这里用的就是上面定义的 registerId
             detail.setUserId(emp.getUserId());
             detail.setStandardIdUsed(standard.getStandardId());
 
-            detail.setAttendanceCount(actualDays); // 写入实际出勤天数
+            detail.setAttendanceCount(actualDays);
             detail.setKpiUnits(kpiUnits);
 
             detail.setBaseSalary(baseSalary);
             detail.setTotalSubsidy(totalSubsidy);
             detail.setKpiBonus(kpiBonus);
             detail.setAttendanceAdjustment(attendanceAdjustment);
+            detail.setInsuranceFee(insuranceFee);     // 新增：保险扣除
             detail.setGrossMoney(grossMoney);
             detail.setPayrollMonth(master.getPayDate());
 
@@ -234,6 +279,7 @@ public class SalaryService {
         master.setTotalAmount(totalAmount);
         registerMasterMapper.updateById(master);
     }
+
 
     /**
      * 新增功能：录入 KPI 分数并重算工资
@@ -281,7 +327,6 @@ public class SalaryService {
         }
 
         // 5. 重新计算 KPI 金额
-        // 需要查出 "KPI 单价"
         SalaryStandardDetail stdDetailKpi = standardDetailMapper.selectOne(
                 new QueryWrapper<SalaryStandardDetail>()
                         .eq("Standard_ID", detail.getStandardIdUsed())
@@ -292,19 +337,22 @@ public class SalaryService {
         BigDecimal kpiBonus = finalKpiUnits.multiply(kpiPrice);
 
         // 6. 更新明细表 (Gross Money 也要重算)
+        BigDecimal insuranceFee = detail.getInsuranceFee() != null ? detail.getInsuranceFee() : BigDecimal.ZERO;
+
         BigDecimal newGross = detail.getBaseSalary()
                 .add(detail.getTotalSubsidy())
-                .add(detail.getAttendanceAdjustment()) // 保持考勤扣款不变
-                .add(kpiBonus) // 新的绩效
-                .add(detail.getOvertimePay() != null ? detail.getOvertimePay() : BigDecimal.ZERO);
+                .add(kpiBonus)
+                .subtract(insuranceFee);
+        // 如果考勤奖惩也要计入实发，可在这里 + detail.getAttendanceAdjustment()
 
         detail.setKpiUnits(finalKpiUnits);
         detail.setKpiBonus(kpiBonus);
+        detail.setInsuranceFee(insuranceFee);
         detail.setGrossMoney(newGross);
 
         registerDetailMapper.updateById(detail);
 
-        // 7. 触发主表总金额更新 (简单起见略，实际应做)
+        // 7. 重新汇总主表总金额
         recalculateMasterTotal(master.getRegisterId());
     }
 
@@ -380,9 +428,7 @@ public class SalaryService {
         standardMasterMapper.updateById(master);
     }
 
-    private BigDecimal nz(BigDecimal v) {
-        return v == null ? BigDecimal.ZERO : v;
-    }
+
 
 
 }

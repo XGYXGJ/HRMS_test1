@@ -14,12 +14,23 @@
                 <button type="submit" class="btn btn-success">发送审核</button>
             </form>
 
-            <button onclick="loadContent('/salary/register/list')" class="btn btn-secondary">返回列表</button>
+            <!-- 撤回：仅 Pending(待审核) 状态显示，将单据撤回为草稿 -->
+            <form th:action="'/salary/register/recall/' + ${master.registerId}"
+                  method="post"
+                  th:if="${master.auditStatus == 'Pending'}"
+                  onsubmit="return confirm('确定要撤回该工资单并变回草稿状态吗？撤回后可以重新修改绩效。')">
+                <button type="submit" class="btn btn-warning">撤回到草稿</button>
+            </form>
+
+            <button onclick="loadContent('/salary/register/list')" class="btn btn-secondary">
+                返回列表
+            </button>
         </div>
     </div>
 
     <div th:if="${master}" class="alert alert-info py-2 small">
-        <strong>单号:</strong> <span th:text="${master.registerId}"></span> |
+        <strong>单号:</strong>
+        <span th:text="${master.registerCode}">PAY2025121101</span> |
         <strong>发放日期:</strong> <span th:text="${master.payDate}"></span> |
         <strong>审核状态:</strong>
         <span th:if="${master.auditStatus == 'Draft'}" class="badge bg-secondary">草稿</span>
@@ -34,28 +45,50 @@
                 <table class="table table-bordered table-hover mb-0">
                     <thead class="table-light">
                     <tr>
-                        <th>员工编号</th>
+                        <th>员工账号</th>
                         <th>姓名</th>
                         <th>职位</th>
 
-                        <th th:each="item : ${allItems}" th:text="${item.itemName}">薪酬项目名称</th>
-
-                        <th>实发金额 (应发合计)</th>
+                        <th>基本工资</th>
+                        <th>各补贴</th>
+                        <th>考勤奖惩</th>
+                        <th>绩效奖金</th>
+                        <th>各保险费用</th>
+                        <th>实发工资</th>
                     </tr>
                     </thead>
                     <tbody>
                     <tr th:each="emp : ${finalDetails}">
-                        <td th:text="${emp.userId}">101</td>
+                        <!-- 员工账号：T_User.Username -->
+                        <td th:text="${emp.username}">emp01</td>
+
+                        <!-- 姓名：T_Personnel_File.Name -->
                         <td th:text="${emp.userName}">张三</td>
+
+                        <!-- 职位名称 -->
                         <td th:text="${emp.positionName}">软件工程师</td>
 
-                        <td th:each="item : ${allItems}">
-                            <span th:with="value=${emp.itemValues.get(item.itemId)}">
-                                <span th:text="${value != null ? #numbers.formatDecimal(value, 1, 'COMMA', 2, 'POINT') : '0.00'}">0.00</span>
-                            </span>
+                        <!-- 基本工资 -->
+                        <td th:text="${#numbers.formatDecimal(emp.baseSalary, 1, 'COMMA', 2, 'POINT')}">0.00</td>
+
+                        <!-- 各补贴（合计），使用工资明细表中的 Total_Subsidy -->
+                        <td th:text="${#numbers.formatDecimal(emp.totalSubsidy, 1, 'COMMA', 2, 'POINT')}">0.00</td>
+
+                        <!-- 考勤奖惩：正值绿色，负值红色 -->
+                        <td th:text="${#numbers.formatDecimal(emp.attendanceAdjustment, 1, 'COMMA', 2, 'POINT')}"
+                            th:classappend="${emp.attendanceAdjustment} >= 0 ? ' text-success' : ' text-danger'">0.00
                         </td>
 
-                        <td class="fw-bold text-success" th:text="${#numbers.formatDecimal(emp.grossMoney, 1, 'COMMA', 2, 'POINT')}">5500.00</td>
+                        <!-- 绩效奖金 -->
+                        <td th:text="${#numbers.formatDecimal(emp.kpiBonus, 1, 'COMMA', 2, 'POINT')}">0.00</td>
+
+                        <!-- 各保险费用合计：工资明细表中的 Insurance_Fee -->
+                        <td class="text-danger"
+                            th:text="${#numbers.formatDecimal(emp.insuranceFee, 1, 'COMMA', 2, 'POINT')}">0.00</td>
+
+                        <!-- 实发工资 = 基本工资 + 补贴 + 考勤奖惩 + 绩效奖金 - 各保险费用（后端已算好 Gross_Money） -->
+                        <td class="fw-bold text-success"
+                            th:text="${#numbers.formatDecimal(emp.grossMoney, 1, 'COMMA', 2, 'POINT')}">0.00</td>
                     </tr>
                     </tbody>
                 </table>

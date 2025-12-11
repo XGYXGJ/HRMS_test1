@@ -2,7 +2,7 @@
     <div class="d-flex justify-content-between align-items-center mb-3">
         <h4>
             审核工资单
-            <small class="text-muted" th:text="'#' + ${master.registerCode}"></small>
+            <small class="text-muted" th:text="'(单号: ' + ${master.registerCode} + ')'"></small>
         </h4>
         <button type="button"
                 onclick="loadContent('/manage/audit/register/list')"
@@ -11,64 +11,123 @@
         </button>
     </div>
 
+    <!-- 基本信息 -->
     <div class="card mb-3 border-primary">
         <div class="card-body bg-light">
             <div class="row mb-2">
                 <div class="col-md-4">
                     <strong>提交人:</strong>
-                    <span th:text="${submitter?.username}"></span>
+                    <span th:text="${submitter != null ? submitter.username : '未知'}"></span>
                 </div>
                 <div class="col-md-4">
                     <strong>提交时间:</strong>
                     <span th:text="${#temporals.format(master.registerTime,'yyyy-MM-dd HH:mm')}"></span>
                 </div>
                 <div class="col-md-4">
-                    <strong>状态:</strong>
-                    <span th:text="${master.auditStatus}"></span>
+                    <strong>发放月份:</strong>
+                    <span th:text="${master.payDate}"></span>
                 </div>
             </div>
 
-            <div class="table-responsive mt-3">
-                <table class="table table-bordered table-hover align-middle">
+            <div class="row mb-2">
+                <div class="col-md-4">
+                    <strong>机构ID:</strong>
+                    <span th:text="${master.l3OrgId}"></span>
+                </div>
+                <div class="col-md-4">
+                    <strong>审核状态:</strong>
+                    <span th:if="${master.auditStatus == 'Draft'}" class="badge bg-secondary">草稿</span>
+                    <span th:if="${master.auditStatus == 'Pending'}" class="badge bg-warning text-dark">待审核</span>
+                    <span th:if="${master.auditStatus == 'Approved'}" class="badge bg-success">已发放</span>
+                    <span th:if="${master.auditStatus == 'Rejected'}" class="badge bg-danger">已驳回</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 工资单明细表：结构与 salary/register_detail.html 一致 -->
+    <div class="card shadow-sm">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-bordered table-hover mb-0">
                     <thead class="table-light">
                     <tr>
-                        <th>薪酬项目</th>
-                        <th>金额</th>
+                        <th>员工账号</th>
+                        <th>姓名</th>
+                        <th>职位</th>
+
+                        <th>基本工资</th>
+                        <th>各补贴</th>
+                        <th>考勤奖惩</th>
+                        <th>绩效奖金</th>
+                        <th>各保险费用</th>
+                        <th>实发工资</th>
                     </tr>
                     </thead>
                     <tbody>
-                    <tr th:each="detail : ${details}">
-                        <td th:text="${itemMap[detail.itemId]}"></td>
-                        <td th:text="${detail.salary}" class="fw-bold"></td>
+                    <tr th:each="emp : ${finalDetails}">
+                        <!-- 员工账号：T_User.Username -->
+                        <td th:text="${emp.username}">emp01</td>
+
+                        <!-- 姓名：T_Personnel_File.Name -->
+                        <td th:text="${emp.userName}">张三</td>
+
+                        <!-- 职位名称 -->
+                        <td th:text="${emp.positionName}">软件工程师</td>
+
+                        <!-- 基本工资 -->
+                        <td th:text="${#numbers.formatDecimal(emp.baseSalary, 1, 'COMMA', 2, 'POINT')}">0.00</td>
+
+                        <!-- 各补贴（合计） -->
+                        <td th:text="${#numbers.formatDecimal(emp.totalSubsidy, 1, 'COMMA', 2, 'POINT')}">0.00</td>
+
+                        <!-- 考勤奖惩：正值绿色，负值红色 -->
+                        <td th:text="${#numbers.formatDecimal(emp.attendanceAdjustment, 1, 'COMMA', 2, 'POINT')}"
+                            th:classappend="${emp.attendanceAdjustment} >= 0 ? ' text-success' : ' text-danger'">
+                            0.00
+                        </td>
+
+                        <!-- 绩效奖金 -->
+                        <td th:text="${#numbers.formatDecimal(emp.kpiBonus, 1, 'COMMA', 2, 'POINT')}">0.00</td>
+
+                        <!-- 各保险费用合计 -->
+                        <td class="text-danger"
+                            th:text="${#numbers.formatDecimal(emp.insuranceFee, 1, 'COMMA', 2, 'POINT')}">0.00</td>
+
+                        <!-- 实发工资 -->
+                        <td class="fw-bold text-success"
+                            th:text="${#numbers.formatDecimal(emp.grossMoney, 1, 'COMMA', 2, 'POINT')}">0.00</td>
                     </tr>
-                    <tr th:if="${#lists.isEmpty(details)}">
-                        <td colspan="2" class="text-center text-muted">暂无明细</td>
+
+                    <tr th:if="${#lists.isEmpty(finalDetails)}">
+                        <td colspan="9" class="text-center text-muted">暂无明细</td>
                     </tr>
                     </tbody>
                 </table>
             </div>
+        </div>
 
-            <div class="text-end mt-3">
-                <form action="/manage/audit/process" method="post" style="display:inline;"
-                      onsubmit="return confirm('确定通过该工资单吗？');">
-                    <input type="hidden" name="type" value="Register">
-                    <input type="hidden" name="id" th:value="${master.registerId}">
-                    <input type="hidden" name="action" value="pass">
-                    <button type="submit" class="btn btn-success me-2">
-                        <i class="bi bi-check-circle"></i> 通过
-                    </button>
-                </form>
+        <!-- 审核操作按钮 -->
+        <div class="card-footer text-end">
+            <form action="/manage/audit/process" method="post" style="display:inline;"
+                  onsubmit="return confirm('确定通过该工资单吗？');">
+                <input type="hidden" name="type" value="Register">
+                <input type="hidden" name="id" th:value="${master.registerId}">
+                <input type="hidden" name="action" value="pass">
+                <button type="submit" class="btn btn-success me-2">
+                    <i class="bi bi-check-circle"></i> 通过
+                </button>
+            </form>
 
-                <form action="/manage/audit/process" method="post" style="display:inline;"
-                      onsubmit="return confirm('确定驳回该工资单吗？');">
-                    <input type="hidden" name="type" value="Register">
-                    <input type="hidden" name="id" th:value="${master.registerId}">
-                    <input type="hidden" name="action" value="reject">
-                    <button type="submit" class="btn btn-danger">
-                        <i class="bi bi-x-circle"></i> 驳回
-                    </button>
-                </form>
-            </div>
+            <form action="/manage/audit/process" method="post" style="display:inline;"
+                  onsubmit="return confirm('确定驳回该工资单吗？');">
+                <input type="hidden" name="type" value="Register">
+                <input type="hidden" name="id" th:value="${master.registerId}">
+                <input type="hidden" name="action" value="reject">
+                <button type="submit" class="btn btn-danger">
+                    <i class="bi bi-x-circle"></i> 驳回
+                </button>
+            </form>
         </div>
     </div>
 </div>

@@ -10,6 +10,7 @@
                 <th>标准编号</th>
                 <th>标准名称</th>
                 <th>适用职位</th>
+                <th>所在机构</th>
                 <th>提交人</th>
                 <th>提交时间</th>
                 <th>状态</th>
@@ -21,9 +22,19 @@
             <tr th:each="std : ${standards}">
                 <td th:text="${std.standardCode}">STD2025</td>
                 <td th:text="${std.standardName}">研发岗标准</td>
+
+                <!-- 适用职位 -->
                 <td th:text="${positionMap.get(std.positionId)?.positionName}">研发岗</td>
+
+                <!-- 所在机构：标准主表里有 L3_Org_ID -->
+                <td th:text="${orgNameMap.get(std.l3OrgId)}">研发部三组</td>
+
+                <!-- 提交人 -->
                 <td th:text="${userMap.get(std.submitterId)?.username}">李四</td>
+
+                <!-- 提交时间 -->
                 <td th:text="${#temporals.format(std.submissionTime, 'yyyy-MM-dd HH:mm')}"></td>
+
                 <td>
                     <span class="badge bg-warning" th:text="${std.auditStatus}">Pending</span>
                 </td>
@@ -36,7 +47,7 @@
             </tr>
 
             <tr th:if="${#lists.isEmpty(standards)}">
-                <td colspan="7" class="text-center text-muted">暂无待审核薪酬标准</td>
+                <td colspan="8" class="text-center text-muted">暂无待审核薪酬标准</td>
             </tr>
             </tbody>
         </table>

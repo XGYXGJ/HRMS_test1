@@ -94,8 +94,10 @@ SET Audit_Status = CASE
                        WHEN status = 2 THEN 'Rejected'
                        ELSE 'Pending' -- 默认情况
     END;
-
-
+ALTER TABLE T_Personnel_File
+    CHANGE COLUMN Admin_Auditor_ID Auditor_ID INT;
+ALTER TABLE T_Personnel_File
+    ADD COLUMN submission_time DATETIME NULL COMMENT '提交时间';
 -- ============================================================
 -- 5. 薪酬项目表 (T_Salary_Item)
 -- ============================================================
@@ -212,6 +214,8 @@ CREATE TABLE T_Salary_Register_Detail (
                                           FOREIGN KEY (User_ID) REFERENCES T_User(User_ID)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+ALTER TABLE T_Salary_Register_Detail
+    ADD COLUMN Insurance_Fee DECIMAL(10,2) NOT NULL DEFAULT 0 COMMENT '保险扣除总额';
 -- ============================================================
 -- 10. 考勤打卡记录表 (新增)
 -- ============================================================
