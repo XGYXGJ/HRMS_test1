@@ -1,4 +1,3 @@
-// src/main/java/com/example/hrms/entity/User.java (完整修正版)
 package com.example.hrms.entity;
 
 import com.baomidou.mybatisplus.annotation.IdType;
@@ -13,6 +12,7 @@ public class User {
     @TableId(value = "User_ID", type = IdType.AUTO)
     private Integer userId;
 
+    @TableField("Username")
     private String username;
 
     @TableField("Password_Hash")
@@ -24,7 +24,6 @@ public class User {
     @TableField("L3_Org_ID")
     private Integer l3OrgId;
 
-    // --- 新增的字段 ---
     @TableField("Is_Deleted")
     private Boolean isDeleted;
 }

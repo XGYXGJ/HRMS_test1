@@ -114,6 +114,10 @@ public class AdminController {
                 user.setPositionId(3);
                 user.setL3OrgId(l3OrgId);
                 break;
+            case "salary":
+                user.setPositionId(4);
+                user.setL3OrgId(l3OrgId);
+                break;
             case "employee":
                 user.setL3OrgId(l3OrgId);
                 user.setPositionId(positionId);

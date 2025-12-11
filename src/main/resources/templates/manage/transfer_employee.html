@@ -1,0 +1,244 @@
+
+<div class="container">
+    <h3>人员岗位调整</h3>
+    <!-- 返回按钮改为调用 loadContent -->
+    <button onclick="loadContent('/manage/home', document.querySelector('#sidebarMenu a.active'))" class="btn btn-secondary mb-3">返回工作台</button>
+
+    <div id="messageAlert" class="alert" style="display: none;"></div>
+
+    <form id="transferForm">
+        <div class="row">
+            <div class="col-md-6">
+                <h5>源信息</h5>
+                <div class="mb-3">
+                    <label for="sourceOrg" class="form-label">选择第三级机构</label>
+                    <select id="sourceOrg" name="sourceOrg" class="form-select" disabled>
+                        <option value="">请选择</option>
+                        <option th:each="org : ${level3Orgs}" th:value="${org.orgId}" th:text="${org.fullName}"></option>
+                    </select>
+                    <!-- Hidden input to submit the value even if disabled -->
+                    <input type="hidden" id="hiddenSourceOrg" name="sourceOrg">
+                </div>
+                <div class="mb-3">
+                    <label for="sourcePosition" class="form-label">选择岗位</label>
+                    <select id="sourcePosition" name="sourcePosition" class="form-select" disabled>
+                        <option value="">请选择</option>
+                    </select>
+                     <input type="hidden" id="hiddenSourcePosition" name="sourcePosition">
+                </div>
+                <div class="mb-3">
+                    <label for="employeeName" class="form-label">员工</label>
+                    <input type="text" id="employeeName" class="form-control" readonly placeholder="请从下方列表选择员工">
+                    <input type="hidden" id="employeeId" name="employeeId" required>
+                </div>
+            </div>
+
+            <div class="col-md-6">
+                <h5>目标信息</h5>
+                <div class="mb-3">
+                    <label for="targetOrg" class="form-label">选择目标第三级机构</label>
+                    <select id="targetOrg" name="targetOrgId" class="form-select" required>
+                        <option value="">请选择</option>
+                        <option th:each="org : ${level3Orgs}" th:value="${org.orgId}" th:text="${org.fullName}"></option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label for="targetPosition" class="form-label">选择目标岗位</label>
+                    <select id="targetPosition" name="targetPositionId" class="form-select" required>
+                        <option value="">请选择</option>
+                        <!-- Options will be loaded dynamically -->
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <button type="submit" class="btn btn-primary mb-4">提交调整</button>
+    </form>
+
+    <hr>
+
+    <h4>员工列表</h4>
+    <div class="mb-3">
+        <input type="text" id="search" class="form-control" placeholder="搜索员工 (姓名/岗位/机构)...">
+    </div>
+    <div id="employeeList" class="employee-list">
+        <!-- Employee items will be loaded here -->
+        <div class="text-center p-3 text-muted">正在加载员工列表...</div>
+    </div>
+</div>
+
+<script>
+    // 使用立即执行函数 (IIFE) 避免污染全局命名空间
+    (function() {
+        console.log("Script executed immediately");
+
+        const searchInput = document.getElementById('search');
+        const employeeListContainer = document.getElementById('employeeList');
+
+        const sourceOrgSelect = document.getElementById('sourceOrg');
+        const sourcePositionSelect = document.getElementById('sourcePosition');
+        const employeeNameInput = document.getElementById('employeeName');
+        const employeeIdInput = document.getElementById('employeeId');
+        const hiddenSourceOrg = document.getElementById('hiddenSourceOrg');
+        const hiddenSourcePosition = document.getElementById('hiddenSourcePosition');
+
+        const targetOrgSelect = document.getElementById('targetOrg');
+        const targetPositionSelect = document.getElementById('targetPosition');
+
+        const transferForm = document.getElementById('transferForm');
+        const messageAlert = document.getElementById('messageAlert');
+
+        // Initial load of all employees
+        loadEmployees('');
+
+        // Event Listeners
+        if (searchInput) {
+            searchInput.addEventListener('input', (e) => loadEmployees(e.target.value));
+        }
+
+        if (targetOrgSelect) {
+            targetOrgSelect.addEventListener('change', () => {
+                loadPositions(targetOrgSelect, targetPositionSelect);
+            });
+        }
+
+        if (transferForm) {
+            transferForm.addEventListener('submit', function(e) {
+                e.preventDefault(); // Prevent default form submission
+
+                const employeeId = employeeIdInput.value;
+                if (!employeeId) {
+                    showMessage('请先选择一名员工', 'danger');
+                    return;
+                }
+
+                const formData = new FormData(transferForm);
+
+                fetch('/manage/employee/transfer', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showMessage(data.message, 'success');
+                        // Reload employee list to reflect changes
+                        loadEmployees(searchInput.value);
+                        // Clear selection
+                        employeeNameInput.value = '';
+                        employeeIdInput.value = '';
+                        sourceOrgSelect.value = '';
+                        sourcePositionSelect.innerHTML = '<option value="">请选择</option>';
+                    } else {
+                        showMessage(data.message, 'danger');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    showMessage('操作失败，请重试', 'danger');
+                });
+            });
+        }
+
+        function showMessage(message, type) {
+            messageAlert.textContent = message;
+            messageAlert.className = `alert alert-${type}`;
+            messageAlert.style.display = 'block';
+            setTimeout(() => {
+                messageAlert.style.display = 'none';
+            }, 3000);
+        }
+
+        function loadEmployees(query) {
+            fetch(`/manage/api/employees/search?query=${query || ''}`)
+                .then(response => response.json())
+                .then(data => {
+                    renderEmployeeList(data);
+                })
+                .catch(e => {
+                    console.error("Error loading employees:", e);
+                    employeeListContainer.innerHTML = `<div class="text-center p-3 text-danger">加载失败: ${e.message}</div>`;
+                });
+        }
+
+        function renderEmployeeList(employees) {
+            employeeListContainer.innerHTML = '';
+            if (!employees || employees.length === 0) {
+                employeeListContainer.innerHTML = '<div class="text-center p-3 text-muted">未找到匹配的员工</div>';
+                return;
+            }
+
+            employees.forEach(emp => {
+                const div = document.createElement('div');
+                div.className = 'employee-item';
+                div.innerHTML = `
+                    <div class="fw-bold">${emp.name || '未知姓名'}</div>
+                    <div class="small text-muted">
+                        机构: ${emp.orgName || '无'} | 岗位: ${emp.positionName || '无'}
+                    </div>
+                `;
+                div.onclick = () => selectEmployee(emp);
+                employeeListContainer.appendChild(div);
+            });
+        }
+
+        function selectEmployee(emp) {
+            // Fill Source Info
+            employeeNameInput.value = emp.name;
+            employeeIdInput.value = emp.userId;
+
+            if (emp.l3OrgId) {
+                sourceOrgSelect.value = emp.l3OrgId;
+                hiddenSourceOrg.value = emp.l3OrgId;
+
+                // Load positions for this org and then select the employee's position
+                loadPositionsForSource(emp.l3OrgId, emp.positionId);
+            } else {
+                sourceOrgSelect.value = "";
+                hiddenSourceOrg.value = "";
+                sourcePositionSelect.innerHTML = '<option value="">请选择</option>';
+            }
+
+            // Scroll to top
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function loadPositionsForSource(orgId, positionIdToSelect) {
+            fetch(`/api/orgs/${orgId}/positions`)
+                .then(response => response.json())
+                .then(data => {
+                    populateSelect(sourcePositionSelect, data, 'positionId', 'positionName');
+                    if (positionIdToSelect) {
+                        sourcePositionSelect.value = positionIdToSelect;
+                        hiddenSourcePosition.value = positionIdToSelect;
+                    }
+                })
+                .catch(e => console.error("Error loading source positions:", e));
+        }
+
+        function loadPositions(orgSelect, positionSelect) {
+            const orgId = orgSelect.value;
+            clearSelect(positionSelect, '请选择');
+            if (orgId) {
+                fetch(`/api/orgs/${orgId}/positions`)
+                    .then(response => response.json())
+                    .then(data => {
+                        populateSelect(positionSelect, data, 'positionId', 'positionName');
+                    })
+                    .catch(e => console.error("Error loading positions:", e));
+            }
+        }
+
+        function populateSelect(selectElement, items, valueKey, textKey) {
+            clearSelect(selectElement, '请选择');
+            items.forEach(item => {
+                const option = new Option(item[textKey], item[valueKey]);
+                selectElement.add(option);
+            });
+        }
+
+        function clearSelect(selectElement, defaultText) {
+            selectElement.innerHTML = `<option value="">${defaultText}</option>`;
+        }
+    })();
+</script>
