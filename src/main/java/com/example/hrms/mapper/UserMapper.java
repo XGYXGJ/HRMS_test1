@@ -1,9 +1,15 @@
 package com.example.hrms.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import com.example.hrms.dto.UserDTO;
 import com.example.hrms.entity.User;
 import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Param;
+
+import java.util.List;
 
 @Mapper
 public interface UserMapper extends BaseMapper<User> {
+    List<UserDTO> searchUsers(@Param("query") String query);
+    List<UserDTO> findUsersByOrgAndPosition(@Param("orgId") Integer orgId, @Param("positionId") Integer positionId);
 }

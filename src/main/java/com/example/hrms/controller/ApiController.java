@@ -32,4 +32,9 @@ public class ApiController {
     public List<Position> getPositionsInOrg(@PathVariable Integer id) {
         return positionMapper.selectList(new QueryWrapper<Position>().eq("L3_Org_ID", id));
     }
+
+    @GetMapping("/orgs/level3")
+    public List<Organization> getLevel3Orgs() {
+        return organizationMapper.selectList(new QueryWrapper<Organization>().eq("level", 3));
+    }
 }

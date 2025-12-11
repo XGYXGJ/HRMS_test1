@@ -83,6 +83,11 @@
                onclick="loadContent('/manage/audit/personnel/history', this)">
                 <i class="bi bi-clock-history"></i> 历史档案审核
             </a>
+
+            <a class="list-group-item list-group-item-action"
+               onclick="loadContent('/manage/transfer_employee', this)">
+                <i class="bi bi-person-gear"></i> 人员岗位调整
+            </a>
         </div>
     </div>
 
@@ -118,7 +123,21 @@
                 return res.text();
             })
             .then(html => {
-                document.getElementById("content-area").innerHTML = html;
+                const contentArea = document.getElementById("content-area");
+                contentArea.innerHTML = html;
+
+                // Find and execute scripts
+                const scripts = contentArea.querySelectorAll("script");
+                scripts.forEach(script => {
+                    const newScript = document.createElement("script");
+                    // Copy attributes
+                    for (let i = 0; i < script.attributes.length; i++) {
+                        const attr = script.attributes[i];
+                        newScript.setAttribute(attr.name, attr.value);
+                    }
+                    newScript.textContent = script.textContent;
+                    document.body.appendChild(newScript).parentNode.removeChild(newScript);
+                });
             })
             .catch(err => {
                 document.getElementById("content-area").innerHTML =
