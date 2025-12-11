@@ -78,6 +78,11 @@
                onclick="loadContent('/manage/audit/personnel/list', this)">
                 <i class="bi bi-person-badge"></i> 档案审核
             </a>
+
+            <a class="list-group-item list-group-item-action"
+               onclick="loadContent('/manage/audit/personnel/history', this)">
+                <i class="bi bi-clock-history"></i> 历史档案审核
+            </a>
         </div>
     </div>
 
@@ -124,7 +129,7 @@
             });
     }
 
-    function submitAudit(id, action) {
+    function submitAudit(id, action, fromHistory) {
         if (!confirm(action === 'pass' ? '确定通过该档案吗？' : '确定驳回该档案吗？')) {
             return;
         }
@@ -139,8 +144,12 @@
         })
         .then(response => {
             if (response.ok) {
-                // 操作成功，重新加载列表页
-                loadContent('/manage/audit/personnel/list');
+                // 操作成功，根据来源刷新不同的列表页
+                if (fromHistory) {
+                    loadContent('/manage/audit/personnel/history');
+                } else {
+                    loadContent('/manage/audit/personnel/list');
+                }
             } else {
                 alert('操作失败，请重试');
             }

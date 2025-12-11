@@ -65,6 +65,7 @@ public class HRController {
         // 强制设置新员工的机构为当前人事经理所在的机构
         file.setL3OrgId(currentUser.getL3OrgId());
         file.setAuditStatus("Pending"); // 设置审核状态为待审核
+        file.setHrSubmitterId(currentUser.getUserId()); // 记录提交人ID
 
         try {
             personnelService.createPersonnelAuto(file, positionId);

@@ -1,17 +1,25 @@
 package com.example.hrms.controller;
 
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.example.hrms.entity.Organization;
 import com.example.hrms.entity.PersonnelFile;
-import com.example.hrms.mapper.PersonnelFileMapper;
-import com.example.hrms.mapper.SalaryRegisterMasterMapper;
-import com.example.hrms.mapper.SalaryStandardMasterMapper;
+import com.example.hrms.entity.Position;
+import com.example.hrms.entity.User;
+import com.example.hrms.mapper.*;
+import com.example.hrms.service.OrganizationService;
 import com.example.hrms.service.SalaryService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.util.StringUtils;
 
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.stream.Collectors;
 
 @Controller
 @RequestMapping("/manage/audit")
@@ -25,18 +33,95 @@ public class ManagementAuditController {
     private SalaryRegisterMasterMapper registerMasterMapper;
     @Autowired
     private PersonnelFileMapper personnelFileMapper;
+    @Autowired
+    private UserMapper userMapper;
+    @Autowired
+    private PositionMapper positionMapper;
+    @Autowired
+    private OrganizationService organizationService;
+    @Autowired
+    private OrganizationMapper organizationMapper;
 
     @GetMapping("/personnel/list")
     public String showPersonnelAuditList(Model model) {
         List<PersonnelFile> files = personnelFileMapper.findByAuditStatus("Pending");
+        List<Integer> submitterIds = files.stream()
+                .map(PersonnelFile::getHrSubmitterId)
+                .filter(Objects::nonNull)
+                .distinct()
+                .collect(Collectors.toList());
+        Map<Integer, User> submitterMap = Collections.emptyMap();
+        if (!submitterIds.isEmpty()) {
+            submitterMap = userMapper.selectBatchIds(submitterIds).stream()
+                    .collect(Collectors.toMap(User::getUserId, user -> user));
+        }
+
+        Map<Integer, String> orgNameMap = files.stream()
+                .map(PersonnelFile::getL3OrgId)
+                .distinct()
+                .collect(Collectors.toMap(id -> id, id -> organizationService.getFullOrgName(id)));
+
         model.addAttribute("files", files);
+        model.addAttribute("submitterMap", submitterMap);
+        model.addAttribute("orgNameMap", orgNameMap);
         return "manage/audit_list_personnel";
+    }
+
+    @GetMapping("/personnel/history")
+    public String showPersonnelAuditHistory(@RequestParam(value = "q", required = false) String q, Model model) {
+        QueryWrapper<PersonnelFile> queryWrapper = new QueryWrapper<>();
+        queryWrapper.in("Audit_Status", "Approved", "Rejected");
+
+        if (StringUtils.hasText(q)) {
+            List<Integer> orgIds = organizationMapper.selectList(new QueryWrapper<Organization>().like("Org_Name", q))
+                    .stream().map(Organization::getOrgId).collect(Collectors.toList());
+            List<Integer> userIds = userMapper.selectList(new QueryWrapper<User>().like("username", q))
+                    .stream().map(User::getUserId).collect(Collectors.toList());
+
+            queryWrapper.and(wrapper -> {
+                wrapper.like("Name", q)
+                        .or().like("Archive_No", q);
+                if (!orgIds.isEmpty()) {
+                    wrapper.or().in("L3_Org_ID", orgIds);
+                }
+                if (!userIds.isEmpty()) {
+                    wrapper.or().in("HR_Submitter_ID", userIds);
+                }
+            });
+        }
+
+        List<PersonnelFile> files = personnelFileMapper.selectList(queryWrapper);
+        List<Integer> submitterIds = files.stream()
+                .map(PersonnelFile::getHrSubmitterId)
+                .filter(Objects::nonNull)
+                .distinct()
+                .collect(Collectors.toList());
+        Map<Integer, User> submitterMap = Collections.emptyMap();
+        if (!submitterIds.isEmpty()) {
+            submitterMap = userMapper.selectBatchIds(submitterIds).stream()
+                    .collect(Collectors.toMap(User::getUserId, user -> user));
+        }
+
+        Map<Integer, String> orgNameMap = files.stream()
+                .map(PersonnelFile::getL3OrgId)
+                .distinct()
+                .collect(Collectors.toMap(id -> id, id -> organizationService.getFullOrgName(id)));
+
+        model.addAttribute("files", files);
+        model.addAttribute("submitterMap", submitterMap);
+        model.addAttribute("orgNameMap", orgNameMap);
+        model.addAttribute("q", q);
+        return "manage/audit_history_personnel";
     }
 
     @GetMapping("/detail/personnel/{id}")
     public String showPersonnelAuditDetail(@PathVariable Integer id, Model model) {
         PersonnelFile file = personnelFileMapper.selectById(id);
+        User user = userMapper.selectById(file.getUserId());
+        Position position = positionMapper.selectById(user.getPositionId());
+
         model.addAttribute("file", file);
+        model.addAttribute("position", position);
         return "manage/audit_detail_personnel";
     }
 

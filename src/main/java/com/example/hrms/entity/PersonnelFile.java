@@ -30,6 +30,9 @@ public class PersonnelFile {
     @TableField("L3_Org_ID")
     private Integer l3OrgId;
 
+    @TableField("HR_Submitter_ID")
+    private Integer hrSubmitterId;
+
     private String auditStatus; // Pending, Approved, Rejected
     private Integer isDeleted;
     private LocalDateTime creationTime;

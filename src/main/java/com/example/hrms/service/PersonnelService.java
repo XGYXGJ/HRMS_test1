@@ -94,7 +94,6 @@ public class PersonnelService {
 
         file.setUserId(uid);
         file.setArchiveNo(account);
-        file.setAuditStatus("Approved");
         file.setIsDeleted(0);
         fileMapper.insert(file);
 
@@ -132,7 +131,6 @@ public class PersonnelService {
 
         file.setUserId(user.getUserId());
         file.setArchiveNo(username);
-        file.setAuditStatus("Approved");
         file.setIsDeleted(0);
         fileMapper.insert(file);
 
