@@ -12,4 +12,5 @@ import java.util.List;
 public interface UserMapper extends BaseMapper<User> {
     List<UserDTO> searchUsers(@Param("query") String query);
     List<UserDTO> findUsersByOrgAndPosition(@Param("orgId") Integer orgId, @Param("positionId") Integer positionId);
+    List<UserDTO> searchUsersByOrg(@Param("orgId") Integer orgId);
 }

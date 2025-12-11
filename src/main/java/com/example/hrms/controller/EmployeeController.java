@@ -1,9 +1,11 @@
-// src/main/java/com/example/hrms/controller/EmployeeController.java (修改)
 package com.example.hrms.controller;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
-import com.example.hrms.entity.*;
-import com.example.hrms.mapper.AttendanceMapper;
+import com.example.hrms.entity.AttendanceRecord;
+import com.example.hrms.entity.PersonnelFile;
+import com.example.hrms.entity.Position;
+import com.example.hrms.entity.User;
+import com.example.hrms.mapper.AttendanceRecordMapper;
 import com.example.hrms.mapper.PersonnelFileMapper;
 import com.example.hrms.mapper.PositionMapper;
 import com.example.hrms.mapper.SalaryRegisterDetailMapper;
@@ -27,12 +29,12 @@ public class EmployeeController {
     @Autowired private SalaryRegisterDetailMapper registerDetailMapper;
     @Autowired private PersonnelFileMapper personnelFileMapper;
     @Autowired private PositionMapper positionMapper;
-    @Autowired private AttendanceMapper attendanceMapper;
+    @Autowired private AttendanceRecordMapper attendanceRecordMapper;
 
     @GetMapping("/home")
     public String home(HttpSession session, Model model) {
         User user = (User) session.getAttribute("user");
-        LocalDate today = LocalDate.now(); // 获取今天日期
+        LocalDate today = LocalDate.now();
 
         // 1. 查询个人档案信息
         PersonnelFile profile = personnelFileMapper.selectOne(
@@ -45,19 +47,16 @@ public class EmployeeController {
             Position position = positionMapper.selectById(user.getPositionId());
             model.addAttribute("position", position);
         }
+        
         // 3. 查询今日是否已打卡
-        Long count = attendanceMapper.selectCount(
+        Long count = attendanceRecordMapper.selectCount(
                 new QueryWrapper<AttendanceRecord>()
                         .eq("User_ID", user.getUserId())
-                        .eq("Punch_Date", today)
+                        .eq("Punch_Date", today) // Corrected column name
         );
-        // 将打卡状态传递给前端
         boolean hasPunchedIn = count > 0;
         model.addAttribute("hasPunchedIn", hasPunchedIn);
-        model.addAttribute("currentDate", today); // 传递当前日期，用于显示
-        // 3. 查询已批准的工资单
-        // List<SalaryRegisterDetail> salaryList = registerDetailMapper.selectApprovedDetailsByUserId(user.getUserId());
-        //model.addAttribute("salaryList", salaryList);
+        model.addAttribute("currentDate", today);
 
         return "emp/home";
     }
@@ -68,10 +67,10 @@ public class EmployeeController {
         LocalDate today = LocalDate.now();
 
         // 1. 检查今日是否已打卡
-        Long count = attendanceMapper.selectCount(
+        Long count = attendanceRecordMapper.selectCount(
                 new QueryWrapper<AttendanceRecord>()
                         .eq("User_ID", user.getUserId())
-                        .eq("Punch_Date", today)
+                        .eq("Punch_Date", today) // Corrected column name
         );
 
         if (count > 0) {
@@ -79,9 +78,10 @@ public class EmployeeController {
         } else {
             AttendanceRecord record = new AttendanceRecord();
             record.setUserId(user.getUserId());
-            record.setPunchDate(today);
-            record.setPunchTime(LocalDateTime.now());
-            attendanceMapper.insert(record);
+            record.setAttendanceDate(today);
+            record.setPunchInTime(LocalDateTime.now());
+            // record.setPunchInType("Normal"); // Removed as the field does not exist in DB
+            attendanceRecordMapper.insert(record);
             attrs.addFlashAttribute("msg", "打卡成功！时间：" + LocalDateTime.now());
         }
         return "redirect:/emp/home";
