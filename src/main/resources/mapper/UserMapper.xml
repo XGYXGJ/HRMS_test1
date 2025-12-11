@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.example.hrms.mapper.UserMapper">
+    <select id="searchUsers" resultType="com.example.hrms.dto.UserDTO">
+        SELECT
+            u.User_ID as userId,
+            u.L3_Org_ID as l3OrgId,
+            u.Position_ID as positionId,
+            pf.Name as name,
+            o.org_name as orgName,
+            p.Position_Name as positionName
+        FROM
+            T_User u
+        JOIN
+            T_Personnel_File pf ON u.User_ID = pf.User_ID
+        LEFT JOIN
+            T_Organization o ON u.L3_Org_ID = o.Org_ID
+        LEFT JOIN
+            T_Position p ON u.Position_ID = p.Position_ID
+        <where>
+            <if test="query != null and query != ''">
+                pf.Name LIKE CONCAT('%', #{query}, '%')
+                OR o.org_name LIKE CONCAT('%', #{query}, '%')
+                OR p.Position_Name LIKE CONCAT('%', #{query}, '%')
+            </if>
+        </where>
+    </select>
+
+    <select id="findUsersByOrgAndPosition" resultType="com.example.hrms.dto.UserDTO">
+        SELECT
+            u.User_ID as userId,
+            pf.Name as name
+        FROM
+            T_User u
+        JOIN
+            T_Personnel_File pf ON u.User_ID = pf.User_ID
+        WHERE
+            u.L3_Org_ID = #{orgId}
+            AND u.Position_ID = #{positionId}
+    </select>
+
+    <select id="searchUsersByOrg" resultType="com.example.hrms.dto.UserDTO">
+        SELECT
+            u.User_ID as userId,
+            u.L3_Org_ID as l3OrgId,
+            u.Position_ID as positionId,
+            pf.Name as name,
+            o.org_name as orgName,
+            p.Position_Name as positionName
+        FROM
+            T_User u
+        JOIN
+            T_Personnel_File pf ON u.User_ID = pf.User_ID
+        LEFT JOIN
+            T_Organization o ON u.L3_Org_ID = o.Org_ID
+        LEFT JOIN
+            T_Position p ON u.Position_ID = p.Position_ID
+        WHERE
+            u.L3_Org_ID = #{orgId}
+    </select>
+</mapper>
