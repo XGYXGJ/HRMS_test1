@@ -2,7 +2,7 @@
     <div class="d-flex justify-content-between align-items-center mb-3">
         <h4>
             工资单明细
-            <small class="text-muted" th:text="'(月份: ' + ${master.payDate} + ')'"></small>
+            <small class="text-muted" th:text="'(月份: ' + ${#temporals.format(master.payDate,'yyyy年MM月')} + ')'"></small>
         </h4>
 
         <div class="d-flex gap-2">
@@ -31,7 +31,7 @@
     <div th:if="${master}" class="alert alert-info py-2 small">
         <strong>单号:</strong>
         <span th:text="${master.registerCode}">PAY2025121101</span> |
-        <strong>发放日期:</strong> <span th:text="${master.payDate}"></span> |
+        <strong>发放日期:</strong> <span th:text="${#temporals.format(master.payDate,'yyyy年MM月')}"></span> |
         <strong>审核状态:</strong>
         <span th:if="${master.auditStatus == 'Draft'}" class="badge bg-secondary">草稿</span>
         <span th:if="${master.auditStatus == 'Pending'}" class="badge bg-warning text-dark">待审核</span>
