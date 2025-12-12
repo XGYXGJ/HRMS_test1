@@ -6,12 +6,17 @@
     --nav-dark: #2c3e50;
     --success-color: #2ecc71;
     --danger-color: #e74c3c;
-    --text-light: #f8f9fa;
+    --text-light: #ffffff;
     --text-muted: #adb5bd;
     --border-color: #495057;
     --border-radius: 10px;
     --box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
     --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+
+    /* 调整焦点状态变量，减少溢出 */
+    --focus-glow: 0 0 0 2px rgba(67, 97, 238, 0.3); /* 从4px减少到2px */
+    --focus-border: 2px solid var(--primary-color);
+    --focus-bg: rgba(255, 255, 255, 0.15);
 }
 
 * {
@@ -210,7 +215,8 @@ body {
 
 /* 表单样式 */
 .form-group {
-    margin-bottom: 1.5rem;
+    margin-bottom: 1.75rem;
+    position: relative;
 }
 
 .form-label {
@@ -220,10 +226,18 @@ body {
     color: var(--text-light);
     margin-bottom: 8px;
     letter-spacing: 0.5px;
+    transition: color 0.3s ease;
+}
+
+.form-group:focus-within .form-label {
+    color: var(--primary-light);
 }
 
 .input-group {
     position: relative;
+    border-radius: var(--border-radius);
+    overflow: hidden;
+    transition: all 0.3s ease;
 }
 
 .input-icon {
@@ -233,30 +247,56 @@ body {
     transform: translateY(-50%);
     color: var(--text-muted);
     font-size: 18px;
-    z-index: 2;
+    z-index: 3;
+    transition: all 0.3s ease;
 }
 
+/* 修复输入框样式，避免白边过界 */
 .form-control {
     width: 100%;
-    height: 52px;
-    padding: 12px 16px 12px 48px;
-    background: rgba(0, 0, 0, 0.2);
-    border: 2px solid rgba(255, 255, 255, 0.1);
+    height: 56px;
+    padding: 16px 20px 16px 50px;
+    background: rgba(255, 255, 255, 0.1);
+    border: 2px solid rgba(255, 255, 255, 0.2);
     border-radius: var(--border-radius);
     color: var(--text-light);
-    font-size: 15px;
-    transition: var(--transition);
+    font-size: 16px;
+    font-weight: 500;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    z-index: 2;
+    letter-spacing: 0.5px;
+    -webkit-text-fill-color: var(--text-light) !important;
+    outline: none; /* 移除默认的outline */
+    box-sizing: border-box; /* 确保padding和border包含在宽度内 */
+}
+
+/* 修复自动填充样式 */
+.form-control:-webkit-autofill,
+.form-control:-webkit-autofill:hover,
+.form-control:-webkit-autofill:focus,
+.form-control:-webkit-autofill:active {
+    -webkit-text-fill-color: var(--text-light) !important;
+    -webkit-box-shadow: 0 0 0px 1000px rgba(255, 255, 255, 0.1) inset !important;
+    transition: background-color 5000s ease-in-out 0s;
+    border: 2px solid rgba(255, 255, 255, 0.2); /* 确保自动填充时边框一致 */
 }
 
 .form-control:focus {
-    outline: none;
-    border-color: var(--primary-color);
-    background: rgba(0, 0, 0, 0.3);
-    box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.1);
+    border: var(--focus-border);
+    background: var(--focus-bg);
+    box-shadow: var(--focus-glow); /* 只使用减少后的glow，移除多余的阴影 */
+    /* 移除 transform: translateY(-2px); 避免位移导致布局变化 */
 }
 
 .form-control:hover:not(:focus) {
-    border-color: rgba(255, 255, 255, 0.2);
+    border-color: rgba(255, 255, 255, 0.3);
+    background: rgba(255, 255, 255, 0.12);
+}
+
+/* 输入框焦点时图标效果 */
+.input-group:focus-within .input-icon {
+    color: var(--primary-light);
 }
 
 /* 密码显示切换 */
@@ -265,26 +305,28 @@ body {
     right: 16px;
     top: 50%;
     transform: translateY(-50%);
-    background: none;
+    background: rgba(255, 255, 255, 0.1);
     border: none;
     color: var(--text-muted);
     cursor: pointer;
-    padding: 4px;
+    padding: 8px;
     display: flex;
     align-items: center;
     justify-content: center;
-    border-radius: 4px;
+    border-radius: 8px;
+    z-index: 3;
+    transition: all 0.3s ease;
 }
 
 .password-toggle:hover {
     color: var(--primary-color);
-    background: rgba(255, 255, 255, 0.05);
+    background: rgba(67, 97, 238, 0.15);
 }
 
 /* 登录按钮 */
 .login-btn {
     width: 100%;
-    height: 52px;
+    height: 56px;
     background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
     border: none;
     border-radius: var(--border-radius);
@@ -299,32 +341,21 @@ body {
     letter-spacing: 0.5px;
     position: relative;
     overflow: hidden;
-}
-
-.login-btn::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: -100%;
-    width: 100%;
-    height: 100%;
-    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
-    transition: left 0.5s ease;
-}
-
-.login-btn:hover::before {
-    left: 100%;
+    margin-top: 10px;
+    box-shadow: 0 4px 15px rgba(67, 97, 238, 0.2);
 }
 
 .login-btn:hover {
     transform: translateY(-2px);
     box-shadow:
-            0 8px 20px rgba(67, 97, 238, 0.4),
-            0 4px 8px rgba(67, 97, 238, 0.2);
+            0 6px 20px rgba(67, 97, 238, 0.4),
+            0 4px 10px rgba(67, 97, 238, 0.2);
+    background: linear-gradient(135deg, var(--primary-light) 0%, var(--primary-color) 100%);
 }
 
 .login-btn:active {
     transform: translateY(0);
+    box-shadow: 0 4px 15px rgba(67, 97, 238, 0.3);
 }
 
 /* 底部信息 */
@@ -349,14 +380,15 @@ body {
 /* 加载动画 */
 .login-btn.loading {
     color: transparent;
+    pointer-events: none;
 }
 
 .login-btn.loading::after {
     content: '';
     position: absolute;
-    width: 20px;
-    height: 20px;
-    border: 2px solid rgba(255, 255, 255, 0.3);
+    width: 24px;
+    height: 24px;
+    border: 3px solid rgba(255, 255, 255, 0.3);
     border-top-color: white;
     border-radius: 50%;
     animation: spin 0.8s linear infinite;
@@ -391,14 +423,14 @@ body {
     }
 }
 
-/* 输入框焦点效果 */
-.input-group:focus-within .input-icon {
-    color: var(--primary-color);
-    transform: translateY(-50%) scale(1.1);
-}
-
 /* 输入框占位符颜色 */
 .form-control::placeholder {
+    color: rgba(255, 255, 255, 0.6);
+    font-weight: 400;
+    letter-spacing: 0.3px;
+}
+
+.form-control:focus::placeholder {
     color: rgba(255, 255, 255, 0.4);
 }
 
@@ -423,4 +455,25 @@ body {
 @keyframes particle-float {
     from { transform: translateY(100vh) rotate(0deg); }
     to { transform: translateY(-100px) rotate(360deg); }
+}
+
+/* 特别针对密码输入框的样式 */
+input[type="password"] {
+    font-family: "Segoe UI", "Roboto", sans-serif;
+    letter-spacing: 0.2em;
+}
+
+/* 新增：确保所有输入框在容器内正确显示 */
+.login-body {
+    overflow: visible; /* 确保内容不会被裁剪 */
+}
+
+/* 新增：输入框容器避免溢出 */
+.input-group {
+    contain: layout; /* 限制影响范围 */
+}
+
+/* 新增：修复可能的外边距溢出问题 */
+.form-group {
+    overflow: visible;
 }
