@@ -4,14 +4,13 @@
         <h4 class="mb-0">我的工资单</h4>
 
         <!-- 按月份查询表单 -->
-        <form class="d-flex align-items-center gap-2" method="get" action="/emp/home">
+        <form class="d-flex align-items-center gap-2" method="get" action="/emp/salary">
             <label class="form-label mb-0">按月份查询:</label>
             <!-- 浏览器会提交形如 2025-12 的字符串 -->
             <input type="month" name="month" class="form-control form-control-sm"
                    style="width: 160px;"
                    th:value="${selectedMonth}">
             <button type="submit" class="btn btn-sm btn-primary">查询</button>
-            <a href="/emp/home" class="btn btn-sm btn-outline-secondary">清空</a>
         </form>
     </div>
     <div class="card-body">
@@ -19,8 +18,8 @@
             <span>此处显示当前登录账号对应的工资记录（按月份倒序），仅自己可见。</span>
             <span th:if="${selectedMonth != null and !#strings.isEmpty(selectedMonth)}"
                   class="ms-2">
-                    当前筛选月份：<strong th:text="${selectedMonth}">2025-12</strong>
-                </span>
+                当前筛选月份：<strong th:text="${selectedMonth}">2025-12</strong>
+            </span>
         </div>
         <table class="table table-striped table-hover">
             <thead>

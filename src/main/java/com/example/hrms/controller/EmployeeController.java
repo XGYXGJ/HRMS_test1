@@ -79,7 +79,7 @@ public class EmployeeController {
 
         dbUser.setPasswordHash(newPassword);
         userMapper.updateById(dbUser);
-        
+
         // 更新 session 中的用户信息
         session.setAttribute("user", dbUser);
 
@@ -252,6 +252,7 @@ public class EmployeeController {
         // 如果没有已发放的工资单，直接返回空
         if (approvedMasters.isEmpty()) {
             model.addAttribute("salaryList", Collections.emptyList());
+            model.addAttribute("registerCodeMap", Collections.emptyMap());
             return "emp/emp_salary";
         }
 

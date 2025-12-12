@@ -1,24 +1,273 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
 <head>
-    <title>系统登录</title>
+    <meta charset="UTF-8">
+    <title>HRMS 系统登录</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="../css/login_style.css">
+
 </head>
-<body class="bg-light d-flex align-items-center justify-content-center" style="height: 100vh;">
-<div class="card p-4 shadow" style="width: 400px;">
-    <h3 class="text-center mb-4">HRMS 登录</h3>
-    <div th:if="${error}" class="alert alert-danger" th:text="${error}"></div>
-    <form action="/login" method="post">
-        <div class="mb-3">
-            <label>用户名</label>
-            <input type="text" name="username" class="form-control" required>
-        </div>
-        <div class="mb-3">
-            <label>密码</label>
-            <input type="password" name="password" class="form-control" required>
-        </div>
-        <button type="submit" class="btn btn-primary w-100">登录</button>
-    </form>
+<body>
+<!-- 背景装饰 -->
+<div class="bg-decoration">
+    <div class="bg-grid"></div>
+    <div class="bg-circle circle-1"></div>
+    <div class="bg-circle circle-2"></div>
+    <div class="bg-circle circle-3"></div>
 </div>
+
+<!-- 粒子背景 -->
+<div class="particles" id="particles"></div>
+
+<!-- 登录容器 -->
+<div class="login-container">
+    <div class="login-card">
+        <!-- 头部 -->
+        <div class="login-header">
+            <div class="logo-container">
+                <div class="logo-icon">
+                    <i class="bi bi-shield-lock"></i>
+                </div>
+                <div class="logo-text">
+                    <h1>HRMS 系统登录</h1>
+                    <p>Human Resource Management System</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- 主体内容 -->
+        <div class="login-body">
+            <!-- 错误提示 -->
+            <div th:if="${error}" class="alert alert-danger">
+                <i class="bi bi-exclamation-triangle-fill"></i>
+                <span th:text="${error}">登录失败</span>
+            </div>
+
+            <!-- 登录表单（完全保持原逻辑） -->
+            <form action="/login" method="post" id="loginForm">
+                <!-- 用户名输入 -->
+                <div class="form-group">
+                    <label class="form-label">用户名</label>
+                    <div class="input-group">
+                        <i class="bi bi-person input-icon"></i>
+                        <input type="text"
+                               name="username"
+                               class="form-control"
+                               required
+                               autocomplete="username"
+                               autofocus
+                               placeholder="请输入用户名">
+                    </div>
+                </div>
+
+                <!-- 密码输入 -->
+                <div class="form-group">
+                    <label class="form-label">密码</label>
+                    <div class="input-group">
+                        <i class="bi bi-lock input-icon"></i>
+                        <input type="password"
+                               name="password"
+                               class="form-control"
+                               required
+                               autocomplete="current-password"
+                               placeholder="请输入密码"
+                               id="passwordInput">
+                        <button type="button" class="password-toggle" id="passwordToggle">
+                            <i class="bi bi-eye"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 登录按钮 -->
+                <button type="submit" class="login-btn" id="loginButton">
+                    <i class="bi bi-box-arrow-in-right"></i>
+                    <span>登录系统</span>
+                </button>
+            </form>
+
+            <!-- 底部信息 -->
+            <div class="login-footer">
+                <div class="system-info">人力资源管理系统</div>
+                <div class="copyright">© 2025 HRMS. B432专有系统，未经授权随便使用</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // 创建粒子背景
+    document.addEventListener('DOMContentLoaded', function() {
+        createParticles();
+
+        // 密码显示/隐藏功能
+        const passwordToggle = document.getElementById('passwordToggle');
+        const passwordInput = document.getElementById('passwordInput');
+
+        if (passwordToggle && passwordInput) {
+            passwordToggle.addEventListener('click', function() {
+                const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+                passwordInput.setAttribute('type', type);
+
+                // 切换图标
+                const icon = this.querySelector('i');
+                icon.className = type === 'password' ? 'bi bi-eye' : 'bi bi-eye-slash';
+            });
+        }
+
+        // 表单提交动画
+        const loginForm = document.getElementById('loginForm');
+        const loginButton = document.getElementById('loginButton');
+
+        if (loginForm && loginButton) {
+            loginForm.addEventListener('submit', function(e) {
+                // 防止重复提交
+                if (loginButton.classList.contains('loading')) {
+                    e.preventDefault();
+                    return;
+                }
+
+                // 显示加载状态
+                loginButton.classList.add('loading');
+
+                // 5秒后自动恢复（防止网络问题导致按钮一直禁用）
+                setTimeout(() => {
+                    loginButton.classList.remove('loading');
+                }, 5000);
+            });
+        }
+
+        // 自动隐藏错误消息
+        const errorAlert = document.querySelector('.alert-danger');
+        if (errorAlert) {
+            setTimeout(() => {
+                errorAlert.style.opacity = '0';
+                errorAlert.style.transform = 'translateY(-10px)';
+                setTimeout(() => {
+                    if (errorAlert.parentNode) {
+                        errorAlert.parentNode.removeChild(errorAlert);
+                    }
+                }, 300);
+            }, 5000);
+        }
+
+        // 添加键盘快捷键
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                const activeElement = document.activeElement;
+                if (activeElement === document.querySelector('input[name="username"]') ||
+                    activeElement === passwordInput) {
+                    e.preventDefault();
+                    loginForm.requestSubmit();
+                }
+            }
+
+            // ESC键聚焦用户名输入框
+            if (e.key === 'Escape') {
+                document.querySelector('input[name="username"]').focus();
+                e.preventDefault();
+            }
+        });
+
+        // 添加输入框焦点效果
+        const inputs = document.querySelectorAll('.form-control');
+        inputs.forEach(input => {
+            input.addEventListener('focus', function() {
+                this.parentElement.classList.add('focused');
+            });
+
+            input.addEventListener('blur', function() {
+                this.parentElement.classList.remove('focused');
+            });
+        });
+
+        // 添加点击波纹效果
+        loginButton.addEventListener('click', function(e) {
+            if (!this.classList.contains('loading')) {
+                const rect = this.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+
+                const ripple = document.createElement('span');
+                ripple.style.position = 'absolute';
+                ripple.style.width = '0';
+                ripple.style.height = '0';
+                ripple.style.borderRadius = '50%';
+                ripple.style.background = 'radial-gradient(circle, rgba(255,255,255,0.3) 0%, rgba(255,255,255,0) 70%)';
+                ripple.style.transform = 'translate(-50%, -50%)';
+                ripple.style.left = x + 'px';
+                ripple.style.top = y + 'px';
+                ripple.style.animation = 'ripple 0.6s linear';
+
+                this.appendChild(ripple);
+
+                setTimeout(() => {
+                    if (ripple.parentNode) {
+                        ripple.parentNode.removeChild(ripple);
+                    }
+                }, 600);
+            }
+        });
+
+        // 添加波纹动画样式
+        const style = document.createElement('style');
+        style.textContent = `
+                @keyframes ripple {
+                    to {
+                        width: 200px;
+                        height: 200px;
+                        opacity: 0;
+                    }
+                }
+            `;
+        document.head.appendChild(style);
+    });
+
+    // 创建粒子背景函数
+    function createParticles() {
+        const particlesContainer = document.getElementById('particles');
+        if (!particlesContainer) return;
+
+        const particleCount = 20;
+
+        for (let i = 0; i < particleCount; i++) {
+            const particle = document.createElement('div');
+            particle.className = 'particle';
+
+            // 随机属性
+            const size = Math.random() * 3 + 1;
+            const left = Math.random() * 100;
+            const opacity = Math.random() * 0.3 + 0.1;
+            const duration = Math.random() * 10 + 15;
+            const delay = Math.random() * 5;
+
+            particle.style.width = `${size}px`;
+            particle.style.height = `${size}px`;
+            particle.style.left = `${left}vw`;
+            particle.style.opacity = opacity;
+            particle.style.animationDuration = `${duration}s`;
+            particle.style.animationDelay = `${delay}s`;
+
+            particlesContainer.appendChild(particle);
+        }
+    }
+
+    // 页面卸载前清理
+    window.addEventListener('beforeunload', function() {
+        const button = document.getElementById('loginButton');
+        if (button) {
+            button.classList.remove('loading');
+        }
+    });
+
+    // 窗口大小变化时调整
+    window.addEventListener('resize', function() {
+        const particlesContainer = document.getElementById('particles');
+        if (particlesContainer) {
+            particlesContainer.innerHTML = '';
+            createParticles();
+        }
+    });
+</script>
 </body>
 </html>

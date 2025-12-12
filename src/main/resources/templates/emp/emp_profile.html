@@ -1,100 +1,204 @@
-<!-- src/main/resources/templates/emp/emp_profile.html -->
 <div class="animate-fade-in">
-    <!-- 个人资料卡片 -->
-    <div class="card mb-4">
-        <div class="card-header d-flex justify-content-between align-items-center">
-            <h4>我的档案</h4>
-            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#changePasswordModal">
-                修改密码
-            </button>
-        </div>
-        <div class="card-body">
-            <div th:if="${profile}">
-                <p><strong>姓名:</strong> <span th:text="${profile.name}"></span></p>
-                <p><strong>性别:</strong> <span th:text="${profile.gender}"></span></p>
-                <p><strong>手机号:</strong> <span th:text="${profile.phoneNumber}"></span></p>
-                <p>
-                    <strong>职位:</strong>
-                    <span th:text="${position != null ? position.positionName : '未分配'}"></span>
-                </p>
+    <div class="animate-fade-in">
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h4>我的档案</h4>
+                <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#changePasswordModal">
+                    修改密码
+                </button>
             </div>
-            <div th:if="${profile == null}" class="alert alert-warning">
-                您的档案信息不完整，请联系人事部门。
+            <div class="card-body">
+                <div th:if="${profile}">
+                    <p><strong>姓名:</strong> <span th:text="${profile.name}"></span></p>
+                    <p><strong>性别:</strong> <span th:text="${profile.gender}"></span></p>
+                    <p><strong>手机号:</strong> <span th:text="${profile.phoneNumber}"></span></p>
+                    <p>
+                        <strong>职位:</strong>
+                        <span th:text="${position != null ? position.positionName : '未分配'}"></span>
+                    </p>
+                </div>
+                <div th:if="${profile == null}" class="alert alert-warning">
+                    您的档案信息不完整，请联系人事部门。
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="changePasswordModal" tabindex="-1" aria-labelledby="changePasswordModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="changePasswordModalLabel">修改密码</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="changePasswordForm" action="/emp/change-password" method="post">
+                        <div class="mb-3">
+                            <label for="currentPassword" class="form-label">当前密码</label>
+                            <input type="password" class="form-control" id="currentPassword" name="currentPassword" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="newPassword" class="form-label">新密码</label>
+                            <input type="password" class="form-control" id="newPassword" name="newPassword" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="confirmPassword" class="form-label">确认新密码</label>
+                            <input type="password" class="form-control" id="confirmPassword" name="confirmPassword" required>
+                        </div>
+                        <div id="password-error" class="alert alert-danger" style="display: none;"></div>
+                        <button type="submit" class="btn btn-primary">确认修改</button>
+                    </form>
+                </div>
             </div>
         </div>
     </div>
 </div>
-
-<!-- 修改密码模态框 -->
-<div class="modal fade" id="changePasswordModal" tabindex="-1" aria-labelledby="changePasswordModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="changePasswordModalLabel">修改密码</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <form id="changePasswordForm" action="/emp/change-password" method="post">
-                    <div class="mb-3">
-                        <label for="currentPassword" class="form-label">当前密码</label>
-                        <input type="password" class="form-control" id="currentPassword" name="currentPassword" required>
-                    </div>
-                    <div class="mb-3">
-                        <label for="newPassword" class="form-label">新密码</label>
-                        <input type="password" class="form-control" id="newPassword" name="newPassword" required>
-                    </div>
-                    <div class="mb-3">
-                        <label for="confirmPassword" class="form-label">确认新密码</label>
-                        <input type="password" class="form-control" id="confirmPassword" name="confirmPassword" required>
-                    </div>
-                    <div id="password-error" class="alert alert-danger" style="display: none;"></div>
-                    <button type="submit" class="btn btn-primary">确认修改</button>
-                </form>
-            </div>
-        </div>
-    </div>
-</div>
-
 <script>
-    // 确保在模态框内的表单提交也使用 AJAX
+    // 初始化：默认加载个人资料页面
     document.addEventListener('DOMContentLoaded', function() {
-        const form = document.getElementById('changePasswordForm');
-        if (form) {
+        loadContent('/emp/profile', document.querySelector('#sidebarMenu a.active'));
+    });
+
+    /**
+     * AJAX 加载内容主函数
+     */
+    function loadContent(url, element) {
+        // 1. 更新侧边栏高亮
+        if (element && element.classList.contains('list-group-item')) {
+            document.querySelectorAll('#sidebarMenu .list-group-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            element.classList.add('active');
+        }
+
+        // 2. 显示加载动画
+        const contentArea = document.getElementById('content-area');
+        const loading = document.getElementById('loading');
+
+        contentArea.style.opacity = '0.5';
+        loading.style.display = 'block';
+
+        // 3. 发起 AJAX 请求
+        fetch(url)
+            .then(response => {
+                if (!response.ok) throw new Error("网络响应异常");
+                return response.text();
+            })
+            .then(html => {
+                // 4. 渲染返回的 HTML
+                contentArea.innerHTML = html;
+                contentArea.style.opacity = '1';
+                loading.style.display = 'none';
+
+                // 5. 重新绑定新内容中的表单事件
+                bindFormEvents();
+            })
+            .catch(err => {
+                contentArea.innerHTML = `
+                    <div class="alert alert-danger animate-fade-in">
+                        <h5><i class="bi bi-exclamation-triangle me-2"></i>加载失败</h5>
+                        <p class="mb-2">${err.message}</p>
+                        <button onclick="loadContent('/emp/profile')" class="btn btn-primary btn-sm">
+                            <i class="bi bi-house-door me-1"></i>返回首页
+                        </button>
+                    </div>
+                `;
+                loading.style.display = 'none';
+                contentArea.style.opacity = '1';
+            });
+    }
+
+    /**
+     * 拦截动态加载内容中的表单提交，转换为 AJAX 请求
+     * *** 关键修改：添加了 data-ajax-ignore 检查 ***
+     */
+    function bindFormEvents() {
+        const forms = document.querySelectorAll('#content-area form');
+
+        forms.forEach(form => {
+            // 跳过设置了 data-ajax-ignore="true" 的表单，让它们使用自己的脚本逻辑
+            if (form.getAttribute('data-ajax-ignore') === 'true') {
+                return;
+            }
+
+            // 移除旧的 submit 事件监听器
+            form.onsubmit = null;
+
             form.addEventListener('submit', function(event) {
                 event.preventDefault();
 
-                const newPassword = document.getElementById('newPassword').value;
-                const confirmPassword = document.getElementById('confirmPassword').value;
-                const errorDiv = document.getElementById('password-error');
-
-                if (newPassword !== confirmPassword) {
-                    errorDiv.textContent = '两次输入的新密码不一致！';
-                    errorDiv.style.display = 'block';
-                    return;
-                }
-                errorDiv.style.display = 'none';
-
+                const action = form.getAttribute('action');
+                const method = (form.getAttribute('method') || 'GET').toUpperCase();
                 const formData = new FormData(form);
-                fetch('/emp/change-password', {
-                    method: 'POST',
-                    body: formData
-                })
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.success) {
-                            alert('密码修改成功！');
-                            const modal = bootstrap.Modal.getInstance(document.getElementById('changePasswordModal'));
-                            modal.hide();
-                        } else {
-                            errorDiv.textContent = data.message || '密码修改失败，请重试。';
-                            errorDiv.style.display = 'block';
-                        }
+
+                // 显示加载动画
+                const contentArea = document.getElementById('content-area');
+                const loading = document.getElementById('loading');
+                loading.style.display = 'block';
+                contentArea.style.opacity = '0.5';
+
+                // 准备请求参数
+                let fetchOptions = { method: method };
+                let requestUrl = action;
+
+                if (method === 'GET') {
+                    const params = new URLSearchParams(formData).toString();
+                    requestUrl = action + (params ? '?' + params : '');
+                } else {
+                    fetchOptions.body = formData;
+                }
+
+                // 发起请求
+                fetch(requestUrl, fetchOptions)
+                    .then(response => {
+                        if (!response.ok) throw new Error("请求失败");
+                        // *** 注意：这里保持返回文本，让它被当作 HTML 渲染 ***
+                        return response.text();
+                    })
+                    .then(html => {
+                        contentArea.innerHTML = html;
+                        loading.style.display = 'none';
+                        contentArea.style.opacity = '1';
+
+                        // 重新绑定新内容中的表单事件
+                        bindFormEvents();
                     })
                     .catch(err => {
-                        errorDiv.textContent = '请求失败，请检查网络连接。';
-                        errorDiv.style.display = 'block';
+                        contentArea.innerHTML = `
+                            <div class="alert alert-danger animate-fade-in">
+                                <h5><i class="bi bi-x-circle me-2"></i>操作失败</h5>
+                                <p class="mb-2">${err.message}</p>
+                                <button onclick="loadContent('/emp/profile')" class="btn btn-primary btn-sm">
+                                    <i class="bi bi-house-door me-1"></i>返回首页
+                                </button>
+                            </div>
+                        `;
+                        loading.style.display = 'none';
+                        contentArea.style.opacity = '1';
                     });
             });
+        });
+    }
+
+    // 全局函数：可用于动态加载的内容中
+    window.showLoading = function() {
+        const loading = document.getElementById('loading');
+        const contentArea = document.getElementById('content-area');
+        if (loading && contentArea) {
+            loading.style.display = 'block';
+            contentArea.style.opacity = '0.5';
         }
-    });
+    };
+
+    window.hideLoading = function() {
+        const loading = document.getElementById('loading');
+        const contentArea = document.getElementById('content-area');
+        if (loading && contentArea) {
+            loading.style.display = 'none';
+            contentArea.style.opacity = '1';
+        }
+    };
+
+    // 暴露 loadContent 到全局作用域
+    window.loadContent = loadContent;
 </script>
