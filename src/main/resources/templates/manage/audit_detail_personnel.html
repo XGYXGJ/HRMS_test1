@@ -5,7 +5,8 @@
             <small class="text-muted" th:text="'#' + ${file.archiveNo}"></small>
         </h4>
         <button type="button"
-                onclick="loadContent('/manage/audit/personnel/list')"
+                th:data-back-url="${from == 'history' ? '/manage/audit/personnel/history' : '/manage/audit/personnel/list'}"
+                onclick="loadContent(this.getAttribute('data-back-url'))"
                 class="btn btn-secondary">
             返回列表
         </button>

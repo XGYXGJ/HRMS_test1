@@ -56,45 +56,45 @@
 </div>
 
 <script>
-// 确保在模态框内的表单提交也使用 AJAX
-document.addEventListener('DOMContentLoaded', function() {
-    const form = document.getElementById('changePasswordForm');
-    if (form) {
-        form.addEventListener('submit', function(event) {
-            event.preventDefault();
+    // 确保在模态框内的表单提交也使用 AJAX
+    document.addEventListener('DOMContentLoaded', function() {
+        const form = document.getElementById('changePasswordForm');
+        if (form) {
+            form.addEventListener('submit', function(event) {
+                event.preventDefault();
 
-            const newPassword = document.getElementById('newPassword').value;
-            const confirmPassword = document.getElementById('confirmPassword').value;
-            const errorDiv = document.getElementById('password-error');
+                const newPassword = document.getElementById('newPassword').value;
+                const confirmPassword = document.getElementById('confirmPassword').value;
+                const errorDiv = document.getElementById('password-error');
 
-            if (newPassword !== confirmPassword) {
-                errorDiv.textContent = '两次输入的新密码不一致！';
-                errorDiv.style.display = 'block';
-                return;
-            }
-            errorDiv.style.display = 'none';
-
-            const formData = new FormData(form);
-            fetch('/emp/change-password', {
-                method: 'POST',
-                body: formData
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    alert('密码修改成功！');
-                    const modal = bootstrap.Modal.getInstance(document.getElementById('changePasswordModal'));
-                    modal.hide();
-                } else {
-                    errorDiv.textContent = data.message || '密码修改失败，请重试。';
+                if (newPassword !== confirmPassword) {
+                    errorDiv.textContent = '两次输入的新密码不一致！';
                     errorDiv.style.display = 'block';
+                    return;
                 }
-            })
-            .catch(err => {
-                errorDiv.textContent = '请求失败，请检查网络连接。';
-                errorDiv.style.display = 'block';
+                errorDiv.style.display = 'none';
+
+                const formData = new FormData(form);
+                fetch('/emp/change-password', {
+                    method: 'POST',
+                    body: formData
+                })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            alert('密码修改成功！');
+                            const modal = bootstrap.Modal.getInstance(document.getElementById('changePasswordModal'));
+                            modal.hide();
+                        } else {
+                            errorDiv.textContent = data.message || '密码修改失败，请重试。';
+                            errorDiv.style.display = 'block';
+                        }
+                    })
+                    .catch(err => {
+                        errorDiv.textContent = '请求失败，请检查网络连接。';
+                        errorDiv.style.display = 'block';
+                    });
             });
-        });
-    }
-});
+        }
+    });
 </script>

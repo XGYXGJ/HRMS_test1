@@ -1,5 +1,5 @@
 <div class="container-fluid">
-    <h4 class="mb-3">历史档案审核</h4>
+    <h4 class="mb-3">档案审核历史</h4>
 
     <form method="get" th:action="@{/manage/audit/personnel/history}" class="mb-3"
           onsubmit="event.preventDefault(); loadContent(this.action + '?q=' + this.q.value);">
@@ -17,7 +17,8 @@
                 <th>档案号</th>
                 <th>姓名</th>
                 <th>提交人</th>
-                <th>所在机构</th>
+                <th>所在机构 (历史)</th>
+                <th>当前机构</th>
                 <th>提交时间</th>
                 <th>状态</th>
                 <th style="width:200px;">操作</th>
@@ -30,6 +31,7 @@
                 <td th:text="${file.name}"></td>
                 <td th:text="${file.submitterName}"></td>
                 <td th:text="${file.formattedOrgName}"></td>
+                <td th:text="${file.formattedCurrentOrgName}"></td>
                 <td th:text="${#temporals.format(file.creationTime, 'yyyy-MM-dd HH:mm')}"></td>
                 <td>
                     <span th:switch="${file.auditStatus}">
@@ -40,7 +42,7 @@
                 </td>
                 <td>
                     <button class="btn btn-sm btn-outline-primary"
-                            th:onclick="|loadContent('/manage/audit/detail/personnel/${file.fileId}')|">
+                            th:onclick="|loadContent('/manage/audit/detail/personnel/${file.fileId}?from=history')|">
                         查看
                     </button>
                     <button th:if="${file.auditStatus != 'Approved'}" class="btn btn-sm btn-success"
@@ -55,7 +57,7 @@
             </tr>
 
             <tr th:if="${#lists.isEmpty(files)}">
-                <td colspan="7" class="text-center text-muted">暂无历史审核记录</td>
+                <td colspan="8" class="text-center text-muted">暂无历史审核记录</td>
             </tr>
             </tbody>
         </table>

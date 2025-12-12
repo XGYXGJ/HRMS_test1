@@ -77,13 +77,16 @@ public class ManagementAuditController {
     }
 
     @GetMapping("/detail/personnel/{id}")
-    public String showPersonnelAuditDetail(@PathVariable Integer id, Model model) {
+    public String showPersonnelAuditDetail(@PathVariable Integer id,
+                                           @RequestParam(defaultValue = "list") String from,
+                                           Model model) {
         PersonnelFile file = personnelFileMapper.selectById(id);
         User user = userMapper.selectById(file.getUserId());
         Position position = positionMapper.selectById(user.getPositionId());
 
         model.addAttribute("file", file);
         model.addAttribute("position", position);
+        model.addAttribute("from", from); // 将 from 参数传递给模板
         return "manage/audit_detail_personnel";
     }
 

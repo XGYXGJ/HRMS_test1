@@ -79,9 +79,12 @@
             pf.Name AS name,
             pf.Audit_Status AS auditStatus,
             pf.L3_Org_ID AS l3OrgId,
-            o.L1_Org_Name AS l1OrgName,
-            o.L2_Org_Name AS l2OrgName,
-            o.L3_Org_Name AS l3OrgName,
+            o_history.L1_Org_Name AS l1OrgName,
+            o_history.L2_Org_Name AS l2OrgName,
+            o_history.L3_Org_Name AS l3OrgName,
+            o_current.L1_Org_Name AS currentL1OrgName,
+            o_current.L2_Org_Name AS currentL2OrgName,
+            o_current.L3_Org_Name AS currentL3OrgName,
             pos.Position_Name AS positionName,
             submitter.username as submitterName,
             pf.Creation_Time AS creationTime
@@ -90,7 +93,9 @@
                 LEFT JOIN
             T_User u ON pf.User_ID = u.User_ID
                 LEFT JOIN
-            T_Organization o ON pf.L3_Org_ID = o.Org_ID
+            T_Organization o_history ON pf.L3_Org_ID = o_history.Org_ID
+                LEFT JOIN
+            T_Organization o_current ON u.L3_Org_ID = o_current.Org_ID
                 LEFT JOIN
             T_Position pos ON u.Position_ID = pos.Position_ID
                 LEFT JOIN
@@ -100,7 +105,8 @@
             <if test="q != null and q != ''">
                 AND (pf.Name LIKE CONCAT('%', #{q}, '%')
                 OR pf.Archive_No LIKE CONCAT('%', #{q}, '%')
-                OR o.Org_Name LIKE CONCAT('%', #{q}, '%')
+                OR o_history.Org_Name LIKE CONCAT('%', #{q}, '%')
+                OR o_current.Org_Name LIKE CONCAT('%', #{q}, '%')
                 OR submitter.username LIKE CONCAT('%', #{q}, '%'))
             </if>
         </where>
