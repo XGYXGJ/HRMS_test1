@@ -1,41 +1,43 @@
-<!-- src/main/resources/templates/admin/position_employees.html -->
-<!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org" lang="zh">
-<head>
-    <meta charset="UTF-8">
-    <title>职位下员工列表</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-</head>
-<body>
-<div class="container mt-4">
-    <h3>职位 "<span th:text="${position.positionName}"></span>" 下的员工 (管理员视图)</h3>
-    <a href="/admin/positions" class="btn btn-secondary mb-3">返回职位列表</a>
-
-    <table class="table table-striped">
-        <thead>
-        <tr>
-            <th>档案号</th>
-            <th>姓名</th>
-            <th>性别</th>
-            <th>手机号</th>
-            <th>操作</th>
-        </tr>
-        </thead>
-        <tbody>
-        <tr th:each="file : ${employeeFiles}">
-            <td th:text="${file.archiveNo}"></td>
-            <td th:text="${file.name}"></td>
-            <td th:text="${file.gender}"></td>
-            <td th:text="${file.phoneNumber}"></td>
-            <td>
-                <a th:href="@{/admin/personnel/{id}(id=${file.fileId})}" class="btn btn-sm btn-info">查看档案</a>
-            </td>
-        </tr>
-        <tr th:if="${#lists.isEmpty(employeeFiles)}">
-            <td colspan="5" class="text-center text-muted">该职位下暂无员工。</td>
-        </tr>
-        </tbody>
-    </table>
+<div class="container-fluid p-4">
+    <div class="card shadow-sm">
+        <div class="card-header bg-light d-flex justify-content-between align-items-center">
+            <h5 class="mb-0 text-primary">
+                <i class="bi bi-people me-2"></i>职位 "<span th:text="${position.positionName}"></span>" 下的员工
+            </h5>
+            <a onclick="loadContent('/admin/position/list', this)" class="btn btn-secondary btn-sm">
+                <i class="bi bi-arrow-left me-1"></i>返回职位列表
+            </a>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead class="table-light">
+                    <tr>
+                        <th>档案号</th>
+                        <th>姓名</th>
+                        <th>性别</th>
+                        <th>手机号</th>
+                        <th class="text-center">操作</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="file : ${employeeFiles}">
+                        <td th:text="${file.archiveNo}"></td>
+                        <td th:text="${file.name}"></td>
+                        <td th:text="${file.gender}"></td>
+                        <td th:text="${file.phoneNumber}"></td>
+                        <td class="text-center">
+                            <a th:onclick="'loadContent(\'/admin/personnel/view/' + ${file.fileId} + '\', this)'" class="btn btn-sm btn-info">
+                                <i class="bi bi-eye"></i> 查看档案
+                            </a>
+                        </td>
+                    </tr>
+                    <tr th:if="${#lists.isEmpty(employeeFiles)}">
+                        <td colspan="5" class="text-center text-muted">该职位下暂无员工。</td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
 </div>
-</body>
-</html>

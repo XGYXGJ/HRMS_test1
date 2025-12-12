@@ -9,43 +9,41 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-/**
- * 薪酬项目管理控制器
- */
 @Controller
-@RequestMapping("/admin/salary/item")
+@RequestMapping("/admin/salary-item")
 public class SalaryItemController {
 
     @Autowired
     private SalaryItemService itemService;
 
-    // 1. 薪酬项目列表页面
     @GetMapping("/list")
     public String listItemPage(Model model) {
         List<SalaryItem> items = itemService.listAllItems();
         model.addAttribute("items", items);
-        model.addAttribute("newItem", new SalaryItem()); // 用于添加表单
+        model.addAttribute("newItem", new SalaryItem());
         return "admin/salary_item_list";
     }
 
-    // 2. 添加薪酬项目
     @PostMapping("/add")
-    public String addItem(SalaryItem item) {
-        // 简单校验
+    public String addItem(SalaryItem item, Model model) {
         if (item.getItemName() != null && item.getItemType() != null) {
             itemService.saveItem(item);
+            model.addAttribute("success", "薪酬项目添加成功！");
         }
-        return "redirect:/admin/salary/item/list";
+        return listItemPage(model);
     }
 
-    // 3. 删除薪酬项目
     @GetMapping("/delete/{itemId}")
-    public String deleteItem(@PathVariable Integer itemId) {
-        itemService.removeItem(itemId);
-        return "redirect:/admin/salary/item/list";
+    public String deleteItem(@PathVariable Integer itemId, Model model) {
+        try {
+            itemService.removeItem(itemId);
+            model.addAttribute("success", "薪酬项目删除成功！");
+        } catch (Exception e) {
+            model.addAttribute("error", "删除失败，该项目可能正在被薪酬标准使用。");
+        }
+        return listItemPage(model);
     }
 
-    // 4. 编辑薪酬项目（跳转到编辑页面）
     @GetMapping("/edit/{itemId}")
     public String editItemPage(@PathVariable Integer itemId, Model model) {
         SalaryItem item = itemService.getItemById(itemId);
@@ -53,10 +51,10 @@ public class SalaryItemController {
         return "admin/salary_item_edit";
     }
 
-    // 5. 更新薪酬项目
-    @PostMapping("/update")
-    public String updateItem(SalaryItem item) {
+    @PostMapping("/edit")
+    public String updateItem(SalaryItem item, Model model) {
         itemService.updateItem(item);
-        return "redirect:/admin/salary/item/list";
+        model.addAttribute("success", "薪酬项目更新成功！");
+        return listItemPage(model);
     }
 }

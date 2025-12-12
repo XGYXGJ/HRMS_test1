@@ -1,0 +1,71 @@
+<div class="container-fluid p-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">
+                        <i class="bi bi-speedometer2 me-2"></i>
+                        管理员工作台
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <p class="lead">欢迎您，<span th:text="${session.user.username}">管理员</span>！在这里，您可以快速访问各项系统管理功能。</p>
+                    <hr>
+                    <div class="row mt-4">
+                        <!-- 机构管理 -->
+                        <div class="col-md-4 mb-4">
+                            <div class="card h-100 dashboard-card">
+                                <div class="card-body d-flex flex-column">
+                                    <h5 class="card-title"><i class="bi bi-building me-2"></i>机构管理</h5>
+                                    <p class="card-text">管理公司的组织架构，包括添加、查看和编辑机构信息。</p>
+                                    <div class="mt-auto">
+                                        <a onclick="loadContent('/admin/org/list', this)" class="btn btn-primary">进入机构管理</a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 职位管理 -->
+                        <div class="col-md-4 mb-4">
+                            <div class="card h-100 dashboard-card">
+                                <div class="card-body d-flex flex-column">
+                                    <h5 class="card-title"><i class="bi bi-diagram-3-fill me-2"></i>职位管理</h5>
+                                    <p class="card-text">维护公司的职位体系，包括职位的增删改查。</p>
+                                    <div class="mt-auto">
+                                        <a onclick="loadContent('/admin/position/list', this)" class="btn btn-primary">进入职位管理</a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 人事档案管理 -->
+                        <div class="col-md-4 mb-4">
+                            <div class="card h-100 dashboard-card">
+                                <div class="card-body d-flex flex-column">
+                                    <h5 class="card-title"><i class="bi bi-people-fill me-2"></i>人事档案管理</h5>
+                                    <p class="card-text">管理员工的详细档案信息，包括新增、查询和审核。</p>
+                                    <div class="mt-auto">
+                                        <a onclick="loadContent('/admin/personnel/list', this)" class="btn btn-primary">进入档案管理</a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 薪酬项目管理 -->
+                        <div class="col-md-4 mb-4">
+                            <div class="card h-100 dashboard-card">
+                                <div class="card-body d-flex flex-column">
+                                    <h5 class="card-title"><i class="bi bi-gear-fill me-2"></i>薪酬项目管理</h5>
+                                    <p class="card-text">管理系统中的薪酬项目，如基本工资、奖金、补贴等。</p>
+                                    <div class="mt-auto">
+                                        <a onclick="loadContent('/admin/salary-item/list', this)" class="btn btn-primary">进入项目管理</a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

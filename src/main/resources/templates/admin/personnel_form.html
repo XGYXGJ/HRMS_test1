@@ -1,77 +1,84 @@
-<!-- src/main/resources/templates/admin/personnel_form.html -->
-<!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
-<head>
-    <title>新建员工档案</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-</head>
-<body class="p-4">
-<h3>新建员工档案 (管理员)</h3>
-<a href="/admin/personnel" class="btn btn-secondary mb-3">返回列表</a>
-
-<div th:if="${error}" class="alert alert-danger" th:text="${error}"></div>
-
-<form method="post" th:action="@{/admin/personnel/create}" class="w-75">
-    <!-- 个人基本信息 -->
-    <div class="row">
-        <div class="col-md-6 mb-3">
-            <label for="name" class="form-label">姓名 <span class="text-danger">*</span></label>
-            <input type="text" id="name" name="name" class="form-control" required>
+<div class="container-fluid p-4">
+    <div class="card shadow-sm">
+        <div class="card-header bg-light d-flex justify-content-between align-items-center">
+            <h5 class="mb-0 text-primary">
+                <i class="bi bi-person-plus-fill me-2"></i>新建员工档案 (管理员)
+            </h5>
+            <a onclick="loadContent('/admin/personnel/list', this)" class="btn btn-secondary btn-sm">
+                <i class="bi bi-arrow-left me-1"></i>返回列表
+            </a>
         </div>
-        <div class="col-md-6 mb-3">
-            <label for="gender" class="form-label">性别</label>
-            <select id="gender" name="gender" class="form-select">
-                <option value="男">男</option>
-                <option value="女">女</option>
-            </select>
+        <div class="card-body">
+            <div th:if="${error}" class="alert alert-danger" th:text="${error}"></div>
+
+            <form method="post" th:action="@{/admin/personnel/new}" class="w-75 mx-auto">
+                <!-- 个人基本信息 -->
+                <h5 class="mb-3 text-primary"><i class="bi bi-info-circle me-2"></i>个人基本信息</h5>
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label for="name" class="form-label">姓名 <span class="text-danger">*</span></label>
+                        <input type="text" id="name" name="name" class="form-control" required>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label for="gender" class="form-label">性别</label>
+                        <select id="gender" name="gender" class="form-select">
+                            <option value="男">男</option>
+                            <option value="女">女</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label for="idNumber" class="form-label">身份证号</label>
+                    <input type="text" id="idNumber" name="idNumber" class="form-control">
+                </div>
+                <div class="mb-3">
+                    <label for="phoneNumber" class="form-label">手机号</label>
+                    <input type="text" id="phoneNumber" name="phoneNumber" class="form-control">
+                </div>
+                <div class="mb-3">
+                    <label for="address" class="form-label">地址</label>
+                    <input type="text" id="address" name="address" class="form-control">
+                </div>
+
+                <hr class="my-4">
+                <h5 class="mb-3 text-primary"><i class="bi bi-building me-2"></i>机构与职位分配</h5>
+
+                <!-- 机构三级联动 -->
+                <div class="row">
+                    <div class="col-md-4 mb-3">
+                        <label for="level1Org" class="form-label">一级机构 <span class="text-danger">*</span></label>
+                        <select id="level1Org" class="form-select" required>
+                            <option value="">-- 请选择 --</option>
+                            <option th:each="org : ${level1Orgs}" th:value="${org.orgId}" th:text="${org.orgName}"></option>
+                        </select>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label for="level2Org" class="form-label">二级机构 <span class="text-danger">*</span></label>
+                        <select id="level2Org" class="form-select" required></select>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label for="level3Org" class="form-label">三级机构 (部门) <span class="text-danger">*</span></label>
+                        <select id="level3Org" name="l3OrgId" class="form-select" required></select>
+                    </div>
+                </div>
+
+                <!-- 职位选择 -->
+                <div class="mb-3">
+                    <label for="positionId" class="form-label">分配职位 <span class="text-danger">*</span></label>
+                    <select id="positionId" name="positionId" class="form-select" required></select>
+                </div>
+
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-check-lg me-1"></i>确认创建
+                </button>
+            </form>
         </div>
     </div>
-    <div class="mb-3">
-        <label for="idNumber" class="form-label">身份证号</label>
-        <input type="text" id="idNumber" name="idNumber" class="form-control">
-    </div>
-    <div class="mb-3">
-        <label for="phoneNumber" class="form-label">手机号</label>
-        <input type="text" id="phoneNumber" name="phoneNumber" class="form-control">
-    </div>
-    <div class="mb-3">
-        <label for="address" class="form-label">地址</label>
-        <input type="text" id="address" name="address" class="form-control">
-    </div>
-
-    <hr>
-    <h5>机构与职位分配</h5>
-
-    <!-- 机构三级联动 -->
-    <div class="row">
-        <div class="col-md-4 mb-3">
-            <label for="level1Org" class="form-label">一级机构 <span class="text-danger">*</span></label>
-            <select id="level1Org" class="form-select" required>
-                <option value="">-- 请选择 --</option>
-                <option th:each="org : ${level1Orgs}" th:value="${org.orgId}" th:text="${org.orgName}"></option>
-            </select>
-        </div>
-        <div class="col-md-4 mb-3">
-            <label for="level2Org" class="form-label">二级机构 <span class="text-danger">*</span></label>
-            <select id="level2Org" class="form-select" required></select>
-        </div>
-        <div class="col-md-4 mb-3">
-            <label for="level3Org" class="form-label">三级机构 (部门) <span class="text-danger">*</span></label>
-            <select id="level3Org" name="l3OrgId" class="form-select" required></select>
-        </div>
-    </div>
-
-    <!-- 职位选择 -->
-    <div class="mb-3">
-        <label for="positionId" class="form-label">分配职位 <span class="text-danger">*</span></label>
-        <select id="positionId" name="positionId" class="form-select" required></select>
-    </div>
-
-    <button type="submit" class="btn btn-primary">确认创建</button>
-</form>
+</div>
 
 <script>
-    document.addEventListener('DOMContentLoaded', function () {
+    'use strict';
+    (function() {
         const l1 = document.getElementById('level1Org');
         const l2 = document.getElementById('level2Org');
         const l3 = document.getElementById('level3Org');
@@ -80,7 +87,7 @@
         async function fetchAndPopulate(url, selectElement, placeholder) {
             selectElement.innerHTML = `<option value="">加载中...</option>`;
             try {
-                const response = await fetch(url);
+                const response = await fetch(url, {credentials: 'include'});
                 const data = await response.json();
                 selectElement.innerHTML = `<option value="">-- ${placeholder} --</option>`;
                 data.forEach(item => {
@@ -92,35 +99,37 @@
             }
         }
 
-        l1.addEventListener('change', () => {
-            l3.innerHTML = '';
-            pos.innerHTML = '';
-            if (l1.value) {
-                fetchAndPopulate(`/api/org/children/${l1.value}`, l2, '请选择二级机构');
-            } else {
-                l2.innerHTML = '';
-            }
-        });
-
-        l2.addEventListener('change', () => {
-            pos.innerHTML = '';
-            if (l2.value) {
-                fetchAndPopulate(`/api/org/children/${l2.value}`, l3, '请选择三级机构');
-            } else {
+        if(l1) {
+            l1.addEventListener('change', () => {
                 l3.innerHTML = '';
-            }
-        });
-
-        l3.addEventListener('change', () => {
-            if (l3.value) {
-                // 使用您在之前步骤中创建的API
-                fetchAndPopulate(`/api/org/${l3.value}/positions`, pos, '请选择职位');
-            } else {
                 pos.innerHTML = '';
-            }
-        });
-    });
-</script>
+                if (l1.value) {
+                    fetchAndPopulate(`/api/org/children/${l1.value}`, l2, '请选择二级机构');
+                } else {
+                    l2.innerHTML = '';
+                }
+            });
+        }
 
-</body>
-</html>
+        if(l2) {
+            l2.addEventListener('change', () => {
+                pos.innerHTML = '';
+                if (l2.value) {
+                    fetchAndPopulate(`/api/org/children/${l2.value}`, l3, '请选择三级机构');
+                } else {
+                    l3.innerHTML = '';
+                }
+            });
+        }
+
+        if(l3) {
+            l3.addEventListener('change', () => {
+                if (l3.value) {
+                    fetchAndPopulate(`/api/org/${l3.value}/positions`, pos, '请选择职位');
+                } else {
+                    pos.innerHTML = '';
+                }
+            });
+        }
+    })();
+</script>

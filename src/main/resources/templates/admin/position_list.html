@@ -1,35 +1,40 @@
-<!DOCTYPE html>
-<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
-<head>
-    <meta charset="UTF-8">
-    <title>职位管理</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-</head>
-<body>
-<div class="container mt-4">
-    <h3>职位管理</h3>
-    <table class="table table-striped">
-        <thead>
-        <tr>
-            <th>ID</th>
-            <th>职位名称</th>
-            <th>所属部门</th>
-            <th>人数</th>
-            <th>操作</th>
-        </tr>
-        </thead>
-        <tbody>
-        <tr th:each="pos : ${positions}">
-            <td th:text="${pos.positionId}"></td>
-            <td th:text="${pos.positionName}"></td>
-            <td th:text="${orgNameMap.get(pos.l3OrgId)}"></td>
-            <td th:text="${employeeCounts.get(pos.positionId) ?: 0}"></td>
-            <td>
-                <a th:href="@{/admin/positions/{id}/employees(id=${pos.positionId})}" class="btn btn-info btn-sm">查看员工</a>
-            </td>
-        </tr>
-        </tbody>
-    </table>
+<div class="container-fluid p-4">
+    <div class="card shadow-sm">
+        <div class="card-header bg-light d-flex justify-content-between align-items-center">
+            <h5 class="mb-0 text-primary">
+                <i class="bi bi-diagram-3-fill me-2"></i>职位管理
+            </h5>
+            <a onclick="loadContent('/admin/position/list', this)" class="btn btn-outline-secondary btn-sm">
+                <i class="bi bi-arrow-repeat me-1"></i>刷新
+            </a>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead class="table-light">
+                    <tr>
+                        <th>ID</th>
+                        <th>职位名称</th>
+                        <th>所属部门</th>
+                        <th>人数</th>
+                        <th class="text-center">操作</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="pos : ${positions}">
+                        <td th:text="${pos.positionId}"></td>
+                        <td th:text="${pos.positionName}"></td>
+                        <td th:text="${orgNameMap.get(pos.l3OrgId)}"></td>
+                        <td th:text="${employeeCounts.get(pos.positionId) ?: 0}"></td>
+                        <td class="text-center">
+                            <a th:onclick="'loadContent(\'/admin/position/' + ${pos.positionId} + '/employees\', this)'" class="btn btn-info btn-sm">
+                                <i class="bi bi-people-fill me-1"></i>查看员工
+                            </a>
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
 </div>
-</body>
-</html>

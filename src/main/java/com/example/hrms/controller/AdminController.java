@@ -47,44 +47,43 @@ public class AdminController {
 
     private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("yyyyMMdd");
 
-    // 1. 管理员主页
     @GetMapping("/dashboard")
     public String dashboard() {
         return "admin/dashboard";
     }
 
-    // 2. 机构列表页面
-    @GetMapping("/orgs")
+    @GetMapping("/dashboard/home")
+    public String dashboardHome() {
+        return "admin/dashboard_home";
+    }
+
+    @GetMapping("/org/list")
     public String listOrgs(Model model) {
         model.addAttribute("orgs", organizationMapper.selectOrgList());
         return "admin/org_list";
     }
 
-    // 3. 机构添加页面
     @GetMapping("/org/add")
     public String addOrgPage(Model model) {
-        // 加载一级机构供选择
         model.addAttribute("level1Orgs", orgService.getLevel1Orgs());
         model.addAttribute("org", new Organization());
         return "admin/org_add";
     }
 
-    // 4. 处理机构添加请求
     @PostMapping("/org/save")
     public String saveOrg(Organization org) {
         orgService.addOrg(org);
-        return "redirect:/admin/orgs?success";
+        return "redirect:/admin/org/list?success";
     }
 
-    // 5. 新建账号页面
     @GetMapping("/users/new")
     public String newUserForm(Model model) {
         List<Organization> level3Orgs = organizationMapper.selectList(new QueryWrapper<Organization>().eq("level", 3));
         List<Map<String, Object>> orgsWithFullName = level3Orgs.stream()
-                .map(org -> {
+                .map(o -> {
                     Map<String, Object> map = new HashMap<>();
-                    map.put("orgId", org.getOrgId());
-                    map.put("fullName", organizationService.getFullOrgName(org.getOrgId()));
+                    map.put("orgId", o.getOrgId());
+                    map.put("fullName", organizationService.getFullOrgName(o.getOrgId()));
                     return map;
                 })
                 .collect(Collectors.toList());
@@ -92,7 +91,6 @@ public class AdminController {
         return "admin/user_form";
     }
 
-    // 6. 处理新建账号
     @PostMapping("/users/create")
     @Transactional
     public String createUser(@RequestParam String role,
@@ -140,10 +138,10 @@ public class AdminController {
         model.addAttribute("success", "账号 " + account + " 创建成功，初始密码为 123");
         List<Organization> level3Orgs = organizationMapper.selectList(new QueryWrapper<Organization>().eq("level", 3));
         List<Map<String, Object>> orgsWithFullName = level3Orgs.stream()
-                .map(org -> {
+                .map(o -> {
                     Map<String, Object> map = new HashMap<>();
-                    map.put("orgId", org.getOrgId());
-                    map.put("fullName", organizationService.getFullOrgName(org.getOrgId()));
+                    map.put("orgId", o.getOrgId());
+                    map.put("fullName", organizationService.getFullOrgName(o.getOrgId()));
                     return map;
                 })
                 .collect(Collectors.toList());
