@@ -1,0 +1,114 @@
+-- HRMS 系统测试数据脚本 (新版机构结构)
+-- 使用说明：请将以下 SQL 语句在您的 MySQL 数据库中执行。
+-- 注意：执行前建议清空现有数据，以免 ID 冲突。
+
+-- ==========================================
+-- 1. 机构数据 (T_Organization)
+-- ==========================================
+-- 清空表 (可选)
+-- DELETE FROM T_Organization;
+
+INSERT INTO T_Organization (Org_ID, Org_Name, Level, Parent_Org_ID, L1_Org_Name, L2_Org_Name, L3_Org_Name) VALUES
+(1, '未来科技集团', 1, NULL, '未来科技集团', NULL, NULL),
+(2, '产品研发中心', 2, 1, '未来科技集团', '产品研发中心', NULL),
+(3, '综合管理中心', 2, 1, '未来科技集团', '综合管理中心', NULL),
+(4, '移动互联部', 3, 2, '未来科技集团', '产品研发中心', '移动互联部'),
+(5, '云平台架构部', 3, 2, '未来科技集团', '产品研发中心', '云平台架构部'),
+(6, '人力资源部', 3, 3, '未来科技集团', '综合管理中心', '人力资源部'),
+(7, '财务资产部', 3, 3, '未来科技集团', '综合管理中心', '财务资产部');
+
+-- ==========================================
+-- 2. 职位数据 (T_Position)
+-- ==========================================
+-- DELETE FROM T_Position;
+
+INSERT INTO T_Position (Position_ID, Position_Name, Auth_Level, L3_Org_ID) VALUES
+(1, '系统管理员', 'Admin', 1),
+(2, '首席执行官', 'Management', 1),
+(3, '人事经理', 'HR', 6),
+(4, '薪酬经理', 'Salary', 7),
+(5, '架构师', 'Employee', 5),
+(6, '移动端开发工程师', 'Employee', 4),
+(7, '招聘专员', 'Employee', 6);
+
+-- ==========================================
+-- 3. 用户数据 (T_User)
+-- 密码统一为: 123
+-- ==========================================
+-- DELETE FROM T_User;
+
+INSERT INTO T_User (User_ID, Username, Password_Hash, Position_ID, L3_Org_ID, Is_Deleted) VALUES
+(1, 'admin', '123', 1, 1, 0),
+(2, 'hr_manager', '123', 3, 6, 0),
+(3, 'salary_manager', '123', 4, 7, 0),
+(4, 'dev_arch', '123', 5, 5, 0),
+(5, 'dev_mobile', '123', 6, 4, 0),
+(6, 'hr_recruiter', '123', 7, 6, 0);
+
+-- ==========================================
+-- 4. 人事档案数据 (T_Personnel_File)
+-- ==========================================
+-- DELETE FROM T_Personnel_File;
+
+INSERT INTO T_Personnel_File (File_ID, Archive_No, User_ID, Name, Gender, ID_Number, Phone_Number, Address, Audit_Status, Hr_Submitter_ID, Creation_Time, Is_Deleted) VALUES
+(1, 'A0001', 1, '系统管理员', '男', '110101199001010001', '13800138001', '集团数据中心', 'Approved', 1, NOW(), 0),
+(2, 'H0001', 2, '林黛玉', '女', '320501199202020002', '13900139002', '苏州市姑苏区', 'Approved', 1, NOW(), 0),
+(3, 'S0001', 3, '薛宝钗', '女', '320101199103030003', '13700137003', '南京市鼓楼区', 'Approved', 1, NOW(), 0),
+(4, 'D0001', 4, '贾宝玉', '男', '320101199505050005', '13600136005', '南京市玄武区', 'Approved', 2, NOW(), 0),
+(5, 'D0002', 5, '史湘云', '女', '320101199806060006', '13500135006', '杭州市天河区', 'Pending', 2, NOW(), 0),
+(6, 'H0002', 6, '甄士隐', '男', '320101199907070007', '13400134007', '苏州市吴中区', 'Rejected', 2, NOW(), 0);
+
+-- ==========================================
+-- 5. 薪酬项目 (T_Salary_Item)
+-- ==========================================
+-- DELETE FROM T_Salary_Item;
+
+INSERT INTO T_Salary_Item (Item_ID, Item_Name, Item_Type) VALUES
+(1, '基本工资', 'Base'),
+(2, '技术津贴', 'Subsidy'),
+(3, '项目奖金', 'Bonus'),
+(4, '交通补贴', 'Subsidy'),
+(5, '公积金扣除', 'Penalty');
+
+-- ==========================================
+-- 6. 薪酬标准 (T_Salary_Standard_Master & Detail)
+-- ==========================================
+-- DELETE FROM T_Salary_Standard_Master;
+-- DELETE FROM T_Salary_Standard_Detail;
+
+-- 架构师薪酬标准
+INSERT INTO T_Salary_Standard_Master (Standard_ID, Standard_Name, Creator_ID, Create_Time, Audit_Status, Position_ID) VALUES
+(1, '2025年度架构师薪资', 3, NOW(), 'Approved', 5);
+
+INSERT INTO T_Salary_Standard_Detail (Detail_ID, Standard_ID, Item_ID, Amount) VALUES
+(1, 1, 1, 25000.00), -- 基本工资
+(2, 1, 2, 5000.00),  -- 技术津贴
+(3, 1, 3, 8000.00);  -- 项目奖金
+
+-- 移动端开发薪酬标准 (待审核)
+INSERT INTO T_Salary_Standard_Master (Standard_ID, Standard_Name, Creator_ID, Create_Time, Audit_Status, Position_ID) VALUES
+(2, '2025年度移动开发薪资', 3, NOW(), 'Pending', 6);
+
+INSERT INTO T_Salary_Standard_Detail (Detail_ID, Standard_ID, Item_ID, Amount) VALUES
+(4, 2, 1, 12000.00),
+(5, 2, 4, 300.00);
+
+-- ==========================================
+-- 7. 考勤记录 (T_Attendance_Record)
+-- 为贾宝玉 (User_ID=4) 添加最近几天的考勤
+-- ==========================================
+-- DELETE FROM T_Attendance_Record;
+
+INSERT INTO T_Attendance_Record (User_ID, Punch_Date, Punch_Time) VALUES
+(4, CURDATE(), NOW()),
+(4, DATE_SUB(CURDATE(), INTERVAL 1 DAY), DATE_SUB(NOW(), INTERVAL 1 DAY)),
+(4, DATE_SUB(CURDATE(), INTERVAL 2 DAY), DATE_SUB(NOW(), INTERVAL 2 DAY)),
+(4, DATE_SUB(CURDATE(), INTERVAL 3 DAY), DATE_SUB(NOW(), INTERVAL 3 DAY));
+
+-- ==========================================
+-- 测试账号清单
+-- ==========================================
+-- 1. 管理员:   admin / 123
+-- 2. 人事经理: hr_manager / 123
+-- 3. 薪酬经理: salary_manager / 123
+-- 4. 员工:     dev_arch / 123
