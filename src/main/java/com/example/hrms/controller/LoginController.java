@@ -29,7 +29,7 @@ public class LoginController {
             if (user.getPositionId() == 2) return "redirect:/manage/dashboard";
             if (user.getPositionId() == 3) return "redirect:/hr/dashboard";
             if (user.getPositionId() == 4) return "redirect:/salary/dashboard";
-            return "redirect:/emp/home";
+            return "redirect:/emp/dashboard";
         }
         model.addAttribute("error", "用户名或密码错误");
         return "login";

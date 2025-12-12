@@ -1,0 +1,23 @@
+<!-- src/main/resources/templates/emp/emp_profile.html -->
+<div class="animate-fade-in">
+    <!-- 个人资料卡片（从 home.html 拆出） -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h4>我的档案</h4>
+        </div>
+        <div class="card-body">
+            <div th:if="${profile}">
+                <p><strong>姓名:</strong> <span th:text="${profile.name}"></span></p>
+                <p><strong>性别:</strong> <span th:text="${profile.gender}"></span></p>
+                <p><strong>手机号:</strong> <span th:text="${profile.phoneNumber}"></span></p>
+                <p>
+                    <strong>职位:</strong>
+                    <span th:text="${position != null ? position.positionName : '未分配'}"></span>
+                </p>
+            </div>
+            <div th:if="${profile == null}" class="alert alert-warning">
+                您的档案信息不完整，请联系人事部门。
+            </div>
+        </div>
+    </div>
+</div>

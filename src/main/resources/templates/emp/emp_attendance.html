@@ -1,0 +1,24 @@
+<!-- src/main/resources/templates/emp/emp_attendance.html -->
+<div class="animate-fade-in">
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h4>考勤打卡 - <span th:text="${currentDate}"></span></h4>
+        </div>
+        <div class="card-body text-center">
+            <div th:if="${hasPunchedIn}">
+                <button type="button" class="btn btn-success btn-lg" disabled>
+                    <i class="bi bi-check-circle"></i> 今日已打卡
+                </button>
+                <p class="mt-2 text-success fw-bold">您今日的考勤已记录，无需重复打卡。</p>
+            </div>
+            <div th:unless="${hasPunchedIn}">
+                <form action="/emp/punch-in" method="post">
+                    <button type="submit" class="btn btn-primary btn-lg">
+                        <i class="bi bi-clock"></i> 上班打卡
+                    </button>
+                </form>
+            </div>
+            <p class="mt-2 text-muted">规则：每日打卡一次，系统自动统计出勤天数。</p>
+        </div>
+    </div>
+</div>
