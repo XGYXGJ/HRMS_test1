@@ -1,10 +1,29 @@
 <div class="container-fluid">
+    <style>
+        /* 统一搜索/刷新按钮的最小宽度，使它们视觉上等大
+           若需要更精确对齐，可调整 min-width 值（例如 80-110px 区间） */
+        .btn-uniform {
+            min-width: 96px;
+        }
+    </style>
     <div class="d-flex justify-content-between mb-3 align-items-center">
         <h3>薪资发放历史</h3>
-        <button onclick="loadContent('/salary/register/list')" class="btn btn-outline-secondary btn-sm">刷新</button>
+
+        <!-- 搜索表单 + 刷新按钮 -->
+        <div class="d-flex align-items-center gap-2">
+            <form class="d-flex" action="/salary/register/list" method="get">
+                <input type="search"
+                       name="registerCode"
+                       class="form-control form-control-sm me-2"
+                       placeholder="根据单号模糊搜索 (例如: PAY20251211)"
+                       th:value="${registerCode}">
+                <button type="submit" class="btn btn-primary btn-sm btn-uniform">搜索</button>
+            </form>
+
+            <button onclick="loadContent('/salary/register/list')" class="btn btn-outline-secondary btn-sm btn-uniform">刷新</button>
+        </div>
     </div>
 
-    <!-- 这两行你原来就有，保留不影响 Modal（只是会多显示一条 alert） -->
     <div th:if="${msg}" class="alert alert-success" th:text="${msg}"></div>
     <div th:if="${error}" class="alert alert-danger" th:text="${error}"></div>
 
@@ -24,7 +43,10 @@
                 <tbody>
                 <tr th:each="reg : ${registers}">
                     <td th:text="${reg.registerCode}">PAY2025121101</td>
-                    <td th:text="${reg.payDate}">2023-10-01</td>
+
+                    <!-- 将日期格式化为“yyyy-MM”格式显示（若想只显示月份数字如“12月”，可改为 'MM' + '月'） -->
+                    <td th:text="${#temporals.format(reg.payDate,'yyyy-MM')}">2025-12</td>
+
                     <td th:text="${reg.totalPeople}">10</td>
                     <td th:text="${reg.totalAmount}">150000.00</td>
                     <td>

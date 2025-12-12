@@ -3,7 +3,8 @@
     <div class="d-flex justify-content-between align-items-center mb-3">
         <h4>
             工资单明细
-            <small class="text-muted" th:text="'(月份: ' + ${master.payDate} + ')'"></small>
+            <!-- 将 master.payDate 格式化为 “yyyy年MM月” 显示为更友好的月份 -->
+            <small class="text-muted" th:text="'(月份: ' + ${#temporals.format(master.payDate,'yyyy年MM月')} + ')'"></small>
         </h4>
 
         <div class="d-flex gap-2">
@@ -35,7 +36,7 @@
         <strong>单号:</strong>
         <!-- 显示 PAY+日期+两位流水号 -->
         <span th:text="${master.registerCode}">PAY2025121101</span> |
-        <strong>月份:</strong> <span th:text="${master.payDate}"></span> |
+        <strong>月份:</strong> <span th:text="${#temporals.format(master.payDate,'yyyy年MM月')}"></span> |
         <strong>标准工作天数:</strong> <span th:text="${master.standardWorkDays}"></span> |
         <strong>审核状态:</strong> <span class="badge bg-warning text-dark">待确认/待审核</span>
         <br>

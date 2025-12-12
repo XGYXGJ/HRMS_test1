@@ -424,10 +424,12 @@ public class SalaryMgrController {
     }
 
     /**
-     * 查询历史工资单列表 (保持不变)
+     * 查询历史工资单列表 (已修改：支持按单号模糊查询)
      */
     @GetMapping("/register/list")
-    public String listRegisters(HttpSession session, Model model) {
+    public String listRegisters(HttpSession session,
+                                Model model,
+                                @RequestParam(value = "registerCode", required = false) String registerCode) {
         User salary = (User) session.getAttribute("user");
         // 增加 null 检查
         if (salary == null) {
@@ -436,11 +438,19 @@ public class SalaryMgrController {
             return "redirect:/salary/dashboard/home";
         }
 
-        List<SalaryRegisterMaster> registers = registerMasterMapper.selectList(
-                new QueryWrapper<SalaryRegisterMaster>()
-                        .eq("L3_Org_ID", salary.getL3OrgId())
-                        .orderByDesc("Pay_Date")
-        );
+        QueryWrapper<SalaryRegisterMaster> wrapper = new QueryWrapper<SalaryRegisterMaster>()
+                .eq("L3_Org_ID", salary.getL3OrgId())
+                .orderByDesc("Pay_Date");
+
+        // 如果传入了单号查询参数，则做模糊匹配
+        if (registerCode != null && !registerCode.trim().isEmpty()) {
+            wrapper.like("Register_Code", registerCode.trim());
+            model.addAttribute("registerCode", registerCode.trim()); // 回显到页面
+        } else {
+            model.addAttribute("registerCode", "");
+        }
+
+        List<SalaryRegisterMaster> registers = registerMasterMapper.selectList(wrapper);
         model.addAttribute("registers", registers);
         return "salary/register_list";
     }
