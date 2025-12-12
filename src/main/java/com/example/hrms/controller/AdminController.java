@@ -9,7 +9,6 @@ import com.example.hrms.mapper.PersonnelFileMapper;
 import com.example.hrms.mapper.UserMapper;
 import com.example.hrms.service.OrgService;
 import com.example.hrms.service.OrganizationService;
-import com.example.hrms.service.PersonnelService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.transaction.annotation.Transactional;
@@ -35,9 +34,6 @@ public class AdminController {
 
     @Autowired
     private UserMapper userMapper;
-
-    @Autowired
-    private PersonnelService personnelService;
 
     @Autowired
     private OrganizationMapper organizationMapper;
@@ -96,7 +92,6 @@ public class AdminController {
     public String createUser(@RequestParam String role,
                              @ModelAttribute PersonnelFile file,
                              @RequestParam(required = false) Integer l3OrgId,
-                             @RequestParam(required = false) Integer positionId,
                              Model model) {
 
         User user = new User();
@@ -105,19 +100,16 @@ public class AdminController {
 
         switch (role) {
             case "management":
-                user.setPositionId(2);
+                user.setPositionId(2); // Assuming 2 is "总经理"
+                user.setL3OrgId(1);     // Belongs to top-level org (e.g., ID 1)
                 break;
             case "hr":
-                user.setPositionId(3);
+                user.setPositionId(3); // Assuming 3 is "人事经理"
                 user.setL3OrgId(l3OrgId);
                 break;
             case "salary":
-                user.setPositionId(4);
+                user.setPositionId(4); // Assuming 4 is "薪酬经理"
                 user.setL3OrgId(l3OrgId);
-                break;
-            case "employee":
-                user.setL3OrgId(l3OrgId);
-                user.setPositionId(positionId);
                 break;
         }
 
@@ -129,13 +121,16 @@ public class AdminController {
         userMapper.updateById(user);
 
         file.setUserId(uid);
+        file.setL3OrgId(user.getL3OrgId()); // Ensure file's orgId matches user's
         file.setArchiveNo(account);
-        file.setAuditStatus("Approved"); // Admin created files are auto-approved
-        file.setHrSubmitterId(1); // Set a default submitter ID
+        file.setAuditStatus("Approved");
+        file.setHrSubmitterId(1); // Admin's ID
         
         fileMapper.insert(file);
 
         model.addAttribute("success", "账号 " + account + " 创建成功，初始密码为 123");
+        
+        // Repopulate model for the form
         List<Organization> level3Orgs = organizationMapper.selectList(new QueryWrapper<Organization>().eq("level", 3));
         List<Map<String, Object>> orgsWithFullName = level3Orgs.stream()
                 .map(o -> {
@@ -146,6 +141,7 @@ public class AdminController {
                 })
                 .collect(Collectors.toList());
         model.addAttribute("level3Orgs", orgsWithFullName);
+
         return "admin/user_form";
     }
 }

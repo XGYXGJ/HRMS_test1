@@ -34,9 +34,15 @@ public class PositionController {
 
     @GetMapping("/list")
     public String listPositions(HttpSession session, Model model) {
+        // Add newPosition to the model at the beginning to prevent template errors
+        model.addAttribute("newPosition", new Position());
+
         User currentUser = (User) session.getAttribute("user");
         if (currentUser == null || currentUser.getL3OrgId() == null) {
-            model.addAttribute("error", "无法获取您的机构信息");
+            model.addAttribute("error", "无法获取您的机构信息，或您不属于任何一个三级机构。");
+            // Still provide an empty list for positions to ensure the page renders correctly
+            model.addAttribute("positions", new ArrayList<Position>());
+            model.addAttribute("employeeCounts", new java.util.HashMap<Integer, Long>());
             return "hr/position_list";
         }
 
@@ -54,10 +60,12 @@ public class PositionController {
                             map -> (Long) map.get("employeeCount")
                     ));
             model.addAttribute("employeeCounts", countMap);
+        } else {
+            // Ensure employeeCounts is not null even if there are no positions
+            model.addAttribute("employeeCounts", new java.util.HashMap<Integer, Long>());
         }
 
         model.addAttribute("positions", positions);
-        model.addAttribute("newPosition", new Position());
         return "hr/position_list";
     }
 
