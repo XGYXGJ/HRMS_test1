@@ -2,8 +2,10 @@ package com.example.hrms.controller;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.example.hrms.entity.AttendanceRecord;
+import com.example.hrms.entity.Organization;
 import com.example.hrms.entity.PersonnelFile;
 import com.example.hrms.entity.SalaryItem;
+import com.example.hrms.mapper.OrganizationMapper;
 import com.example.hrms.mapper.SalaryItemMapper;
 import com.example.hrms.entity.Position;
 import com.example.hrms.entity.SalaryRegisterDetail;
@@ -47,6 +49,7 @@ public class EmployeeController {
     @Autowired private SalaryRegisterMasterMapper salaryRegisterMasterMapper;
     @Autowired private SalaryItemMapper salaryItemMapper;
     @Autowired private UserMapper userMapper;
+    @Autowired private OrganizationMapper organizationMapper;
 
     @GetMapping("/dashboard")
     public String dashboard(HttpSession session) {
@@ -130,6 +133,13 @@ public class EmployeeController {
                         .eq("User_ID", user.getUserId())
         );
         model.addAttribute("profile", profile);
+
+        if (profile != null && profile.getL3OrgId() != null) {
+            Organization org = organizationMapper.selectById(profile.getL3OrgId());
+            if (org != null) {
+                model.addAttribute("organizationName", org.getOrgName());
+            }
+        }
 
         Position position = null;
         if (user.getPositionId() != null) {

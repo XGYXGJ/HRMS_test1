@@ -12,13 +12,16 @@
                     <p><strong>姓名:</strong> <span th:text="${profile.name}"></span></p>
                     <p><strong>性别:</strong> <span th:text="${profile.gender}"></span></p>
                     <p><strong>手机号:</strong> <span th:text="${profile.phoneNumber}"></span></p>
+                    <p><strong>身份证号:</strong> <span th:text="${profile.idNumber}"></span></p>
+                    <p><strong>地址:</strong> <span th:text="${profile.address}"></span></p>
+                    <p><strong>所属机构:</strong> <span th:text="${organizationName != null ? organizationName : '未分配'}"></span></p>
                     <p>
                         <strong>职位:</strong>
                         <span th:text="${position != null ? position.positionName : '未分配'}"></span>
                     </p>
                 </div>
                 <div th:if="${profile == null}" class="alert alert-warning">
-                    您的档案信息不完整，请联系人事部门。
+                    您的档案信息缺失，请联系人事部门。
                 </div>
             </div>
         </div>
