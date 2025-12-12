@@ -1,129 +1,121 @@
-<!DOCTYPE html>
-<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
-<head>
-    <meta charset="UTF-8">
-    <title>新建账号</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <style>
-        body {
-            padding: 20px;
-        }
-    </style>
-</head>
-<body>
+<div class="container-fluid p-4">
+    <div class="card shadow-sm">
+        <div class="card-header bg-light d-flex justify-content-between align-items-center">
+            <h5 class="mb-0 text-primary">
+                <i class="bi bi-person-plus-fill me-2"></i>新建账号
+            </h5>
+            <a onclick="loadContent('/admin/dashboard/home', this)" class="btn btn-secondary btn-sm">
+                <i class="bi bi-arrow-left me-1"></i>返回仪表盘
+            </a>
+        </div>
+        <div class="card-body">
+            <div th:if="${success}" class="alert alert-success" th:text="${success}"></div>
+            <div th:if="${error}" class="alert alert-danger" th:text="${error}"></div>
 
-<div class="container">
-    <h3>新建账号</h3>
-    <a th:href="@{/admin/dashboard}" class="btn btn-secondary mb-3">返回工作台</a>
-
-    <div th:if="${success}" class="alert alert-success" th:text="${success}"></div>
-    <div th:if="${error}" class="alert alert-danger" th:text="${error}"></div>
-
-    <form method="post" th:action="@{/admin/users/create}">
-        <div class="row">
-            <div class="col-md-6">
-                <div class="mb-3">
-                    <label for="name" class="form-label">姓名</label>
-                    <input type="text" id="name" name="name" class="form-control" required>
-                </div>
+            <!-- Friendly message if no level-3 orgs are available -->
+            <div th:if="${#lists.isEmpty(level3Orgs)}" class="alert alert-warning">
+                <strong>提示：</strong> 系统中当前没有可用的三级机构。您无法创建“人事经理”或“薪酬经理”角色，因为这些角色必须关联一个三级机构。请先在“机构管理”中添加三级机构。
             </div>
-            <div class="col-md-6">
+
+            <form method="post" th:action="@{/admin/users/create}" class="w-75 mx-auto">
+                <h5 class="mb-3 text-primary"><i class="bi bi-info-circle me-2"></i>基本信息</h5>
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label for="name" class="form-label">姓名</label>
+                        <input type="text" id="name" name="name" class="form-control" required>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label for="gender" class="form-label">性别</label>
+                        <select id="gender" name="gender" class="form-select">
+                            <option value="男">男</option>
+                            <option value="女">女</option>
+                        </select>
+                    </div>
+                </div>
                 <div class="mb-3">
-                    <label for="gender" class="form-label">性别</label>
-                    <select id="gender" name="gender" class="form-select">
-                        <option value="男">男</option>
-                        <option value="女">女</option>
+                    <label for="idNumber" class="form-label">身份证号</label>
+                    <input type="text" id="idNumber" name="idNumber" class="form-control">
+                </div>
+                <div class="mb-3">
+                    <label for="phoneNumber" class="form-label">手机号</label>
+                    <input type="text" id="phoneNumber" name="phoneNumber" class="form-control">
+                </div>
+                <div class="mb-3">
+                    <label for="address" class="form-label">地址</label>
+                    <input type="text" id="address" name="address" class="form-control">
+                </div>
+
+                <hr class="my-4">
+                <h5 class="mb-3 text-primary"><i class="bi bi-diagram-3 me-2"></i>角色与归属</h5>
+                <div class="mb-3">
+                    <label for="role" class="form-label">角色</label>
+                    <select id="role" name="role" class="form-select" required onchange="toggleFields()">
+                        <option value="hr" th:disabled="${#lists.isEmpty(level3Orgs)}" selected>人事经理</option>
+                        <option value="salary" th:disabled="${#lists.isEmpty(level3Orgs)}">薪酬经理</option>
+                        <option value="management">管理部门 (总经理等)</option>
                     </select>
+                    <div th:if="${#lists.isEmpty(level3Orgs)}" class="form-text text-danger">
+                        * 人事/薪酬经理角色当前不可用，因为没有可分配的机构。
+                    </div>
                 </div>
-            </div>
-        </div>
 
-        <div class="mb-3">
-            <label for="idNumber" class="form-label">身份证号</label>
-            <input type="text" id="idNumber" name="idNumber" class="form-control">
-        </div>
+                <div id="org-field" style="display: none;">
+                    <div class="mb-3">
+                        <label for="l3OrgId" class="form-label">所属机构</label>
+                        <select id="l3OrgId" name="l3OrgId" class="form-select">
+                            <option value="">-- 请选择 --</option>
+                            <option th:each="org : ${level3Orgs}" th:value="${org.orgId}" th:text="${org.fullName}"></option>
+                        </select>
+                    </div>
+                </div>
 
-        <div class="mb-3">
-            <label for="phoneNumber" class="form-label">手机号</label>
-            <input type="text" id="phoneNumber" name="phoneNumber" class="form-control">
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-check-lg me-1"></i>创建账号
+                </button>
+            </form>
         </div>
-
-        <div class="mb-3">
-            <label for="address" class="form-label">地址</label>
-            <input type="text" id="address" name="address" class="form-control">
-        </div>
-
-        <div class="mb-3">
-            <label for="role" class="form-label">角色</label>
-            <select id="role" name="role" class="form-select" required onchange="toggleFields()">
-                <option value="hr">人事经理</option>
-                <option value="employee">员工</option>
-                <option value="management">管理部门</option>
-                <option value="salary">薪酬经理</option>
-            </select>
-        </div>
-
-        <div id="org-field">
-            <div class="mb-3">
-                <label for="l3OrgId" class="form-label">所属机构</label>
-                <select id="l3OrgId" name="l3OrgId" class="form-select" onchange="loadPositions()">
-                    <option th:each="org : ${level3Orgs}" th:value="${org.orgId}" th:text="${org.fullName}"></option>
-                </select>
-            </div>
-        </div>
-
-        <div id="position-field" style="display: none;">
-            <div class="mb-3">
-                <label for="positionId" class="form-label">职位</label>
-                <select id="positionId" name="positionId" class="form-select"></select>
-            </div>
-        </div>
-
-        <button type="submit" class="btn btn-primary">创建账号</button>
-    </form>
+    </div>
 </div>
 
 <script>
-    function toggleFields() {
-        const role = document.getElementById('role').value;
-        const orgField = document.getElementById('org-field');
-        const positionField = document.getElementById('position-field');
+    'use strict';
+    (function() {
+        function toggleFields() {
+            const roleSelect = document.getElementById('role');
+            const role = roleSelect.value;
+            const orgField = document.getElementById('org-field');
+            const l3OrgIdSelect = document.getElementById('l3OrgId');
 
-        if (role === 'management') {
+            // If the currently selected role is disabled (e.g., on page load with no orgs),
+            // find the first available role and switch to it.
+            if (roleSelect.options[roleSelect.selectedIndex].disabled) {
+                for (let i = 0; i < roleSelect.options.length; i++) {
+                    if (!roleSelect.options[i].disabled) {
+                        roleSelect.value = roleSelect.options[i].value;
+                        // After changing selection, call toggleFields again to update the view.
+                        toggleFields();
+                        return; // Exit to avoid running the rest of the function with the old value
+                    }
+                }
+            }
+
+            // Reset fields
             orgField.style.display = 'none';
-            positionField.style.display = 'none';
-        } else {
-            orgField.style.display = 'block';
-            if (role === 'employee') {
-                positionField.style.display = 'block';
-                loadPositions();
-            } else {
-                positionField.style.display = 'none';
+            l3OrgIdSelect.required = false;
+
+            // Show and require org field only for roles that need it
+            if (role === 'hr' || role === 'salary') {
+                orgField.style.display = 'block';
+                l3OrgIdSelect.required = true;
             }
         }
-    }
 
-    function loadPositions() {
-        const role = document.getElementById('role').value;
-        if (role !== 'employee') return;
+        // Attach to window for external calls if needed, and for onchange event
+        window.toggleFields = toggleFields;
 
-        const l3OrgId = document.getElementById('l3OrgId').value;
-        const positionSelect = document.getElementById('positionId');
-        positionSelect.innerHTML = '';
-        if (l3OrgId) {
-            fetch('/api/orgs/' + l3OrgId + '/positions')
-                .then(response => response.json())
-                .then(data => {
-                    data.forEach(pos => {
-                        const option = new Option(pos.positionName, pos.positionId);
-                        positionSelect.add(option);
-                    });
-                });
-        }
-    }
-
-    document.addEventListener('DOMContentLoaded', toggleFields);
+        // Run on initial page load
+        document.addEventListener('DOMContentLoaded', function() {
+            toggleFields();
+        });
+    })();
 </script>
-
-</body>
-</html>

@@ -1,9 +1,11 @@
 package com.example.hrms.controller;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.example.hrms.entity.Organization;
 import com.example.hrms.entity.PersonnelFile;
 import com.example.hrms.entity.Position;
 import com.example.hrms.entity.User;
+import com.example.hrms.mapper.OrganizationMapper;
 import com.example.hrms.mapper.PersonnelFileMapper;
 import com.example.hrms.mapper.PositionMapper;
 import com.example.hrms.mapper.UserMapper;
@@ -12,8 +14,16 @@ import com.example.hrms.service.OrganizationService;
 import com.example.hrms.service.PersonnelService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
+
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Controller
 @RequestMapping("/admin")
@@ -31,6 +41,10 @@ public class AdminPersonnelController {
     private UserMapper userMapper;
     @Autowired
     private OrganizationService organizationService;
+    @Autowired
+    private OrganizationMapper organizationMapper;
+
+    private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("yyyyMMdd");
 
     @GetMapping("/personnel/list")
     public String listAllFiles(@RequestParam(value = "q", required = false) String q,
@@ -56,23 +70,68 @@ public class AdminPersonnelController {
 
     @GetMapping("/personnel/new")
     public String newFilePage(Model model) {
-        model.addAttribute("level1Orgs", orgService.getLevel1Orgs());
+        // This is the same logic as in AdminController's newUserForm
+        List<Organization> level3Orgs = organizationMapper.selectList(new QueryWrapper<Organization>().eq("level", 3));
+        List<Map<String, Object>> orgsWithFullName = level3Orgs.stream()
+                .map(o -> {
+                    Map<String, Object> map = new HashMap<>();
+                    map.put("orgId", o.getOrgId());
+                    map.put("fullName", organizationService.getFullOrgName(o.getOrgId()));
+                    return map;
+                })
+                .collect(Collectors.toList());
+        model.addAttribute("level3Orgs", orgsWithFullName);
+        model.addAttribute("file", new PersonnelFile()); // Add an empty file object
         return "admin/personnel_form";
     }
 
     @PostMapping("/personnel/new")
-    public String createFile(@ModelAttribute PersonnelFile file,
-                             @RequestParam Integer positionId,
+    @Transactional
+    public String createFile(@RequestParam String role,
+                             @ModelAttribute PersonnelFile file,
+                             @RequestParam(required = false) Integer l3OrgId,
                              Model model) {
-        try {
-            personnelService.createPersonnelAuto(file, positionId);
-        } catch (Exception e) {
-            model.addAttribute("error", "创建失败: " + e.getMessage());
-            model.addAttribute("level1Orgs", orgService.getLevel1Orgs());
-            return "admin/personnel_form";
+
+        // This logic is adapted from AdminController's createUser method
+        User user = new User();
+        user.setUsername("temp_" + System.currentTimeMillis());
+        user.setPasswordHash("123"); // Default password
+
+        switch (role) {
+            case "management":
+                user.setPositionId(2); // 2 is "管理部门"
+                user.setL3OrgId(1);     // Belongs to top-level org
+                break;
+            case "hr":
+                user.setPositionId(3); // 3 is "人事经理"
+                user.setL3OrgId(l3OrgId);
+                break;
+            case "salary":
+                user.setPositionId(4); // 4 is "薪酬经理"
+                user.setL3OrgId(l3OrgId);
+                break;
         }
-        return "redirect:/admin/personnel/list?success_create";
+
+        userMapper.insert(user);
+        int uid = user.getUserId();
+        String dateStr = LocalDate.now().format(DATE_FMT);
+        String account = dateStr + String.format("%04d", uid % 10000);
+        user.setUsername(account);
+        userMapper.updateById(user);
+
+        file.setUserId(uid);
+        file.setL3OrgId(user.getL3OrgId()); // Ensure file's orgId matches user's
+        file.setArchiveNo(account);
+        file.setAuditStatus("Approved");
+        file.setHrSubmitterId(1); // Admin's ID
+
+        personnelFileMapper.insert(file);
+
+        // Instead of redirecting, forward to the list view with a success message
+        model.addAttribute("success", "账号 " + account + " 创建成功，初始密码为 123");
+        return listAllFiles(null, null, model);
     }
+
 
     @GetMapping("/personnel/view/{id}")
     public String viewFile(@PathVariable Integer id, Model model) {
@@ -84,15 +143,17 @@ public class AdminPersonnelController {
         String orgName = organizationService.getFullOrgName(file.getL3OrgId());
         User user = userMapper.selectById(file.getUserId());
         Position position = null;
-        if (user != null) {
+        if (user != null && user.getPositionId() != null) {
             position = positionMapper.selectById(user.getPositionId());
         }
 
         model.addAttribute("file", file);
         model.addAttribute("orgName", orgName);
         model.addAttribute("positionName", position != null ? position.getPositionName() : "-");
+        model.addAttribute("account", user != null ? user.getUsername() : "N/A");
         return "admin/personnel_view";
     }
+
 
     @GetMapping("/personnel/edit/{id}")
     public String editFilePage(@PathVariable Integer id, Model model) {
@@ -102,7 +163,8 @@ public class AdminPersonnelController {
         User user = userMapper.selectOne(new QueryWrapper<User>().eq("User_ID", file.getUserId()));
         if (user != null) {
             model.addAttribute("currentPositionId", user.getPositionId());
-            model.addAttribute("positions", positionMapper.selectList(new QueryWrapper<Position>().eq("L3_Org_ID", user.getL3OrgId())));
+            // Provide all positions for potential changes, maybe grouped by org later
+            model.addAttribute("positions", positionMapper.selectList(null));
         }
 
         return "admin/personnel_edit";
