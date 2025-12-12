@@ -1,90 +1,78 @@
-<!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org" lang="zh">
-<head>
-    <meta charset="UTF-8">
-    <title>人事档案管理 (管理员)</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-</head>
-<body>
-<nav class="navbar navbar-dark bg-dark px-3">
-    <a class="navbar-brand" href="#">HR 管理系统</a>
-    <span class="text-white">欢迎，管理员</span>
-</nav>
-
-<div class="d-flex">
-    <!-- 侧边栏 -->
-    <div class="bg-light border-end" style="width: 250px; min-height: 90vh;">
-        <div class="list-group list-group-flush" id="adminSidebar">
-            <!-- 侧边栏内容将在第五步统一更新 -->
-        </div>
-    </div>
-
-    <!-- 主内容区域 -->
-    <div class="p-4 w-100">
-        <div class="d-flex justify-content-between mb-3">
-            <h3>人事档案管理 (全局)</h3>
+<div class="container-fluid p-4">
+    <div class="card shadow-sm">
+        <div class="card-header bg-light d-flex justify-content-between align-items-center">
+            <h5 class="mb-0 text-primary">
+                <i class="bi bi-people-fill me-2"></i>人事档案管理 (全局)
+            </h5>
             <div>
-                <a th:href="@{/admin/personnel/new}" class="btn btn-primary">新增档案</a>
-                <a th:href="@{/admin/personnel}" class="btn btn-outline-secondary">刷新</a>
+                <a onclick="loadContent('/admin/personnel/new', this)" class="btn btn-primary btn-sm">
+                    <i class="bi bi-plus-circle me-1"></i>新增档案
+                </a>
+                <a onclick="loadContent('/admin/personnel/list', this)" class="btn btn-outline-secondary btn-sm">
+                    <i class="bi bi-arrow-repeat me-1"></i>刷新
+                </a>
             </div>
         </div>
-
-        <form method="get" th:action="@{/admin/personnel}" class="mb-3">
-            <div class="input-group">
-                <input type="text" name="q" th:value="${q}" class="form-control" placeholder="按姓名/手机号/档案号/账号/机构/职务搜索">
-                <button class="btn btn-primary" type="submit">搜索</button>
-                <a th:href="@{/admin/personnel}" class="btn btn-link">重置</a>
+        <div class="card-body">
+            <div th:if="${success}" class="alert alert-success alert-dismissible fade show" role="alert">
+                [[${success}]]
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
             </div>
-        </form>
+            <form method="get" action="/admin/personnel/list" class="mb-3">
+                <div class="input-group">
+                    <input type="text" name="q" th:value="${q}" class="form-control" placeholder="按姓名/手机号/档案号/账号/机构/职务搜索">
+                    <button class="btn btn-primary" type="submit">
+                        <i class="bi bi-search"></i> 搜索
+                    </button>
+                    <a onclick="loadContent('/admin/personnel/list', this)" class="btn btn-link">重置</a>
+                </div>
+            </form>
 
-        <table class="table table-striped table-hover">
-            <thead class="table-light">
-            <tr>
-                <th>档案ID</th>
-                <th>姓名</th>
-                <th>所属机构</th>
-                <th>职务</th> <!-- 【新增】 -->
-                <th>手机号</th>
-                <th>审核状态</th>
-                <th>操作</th>
-            </tr>
-            </thead>
-            <tbody>
-            <tr th:each="f : ${files}">
-                <td th:text="${f.fileId}"></td>
-                <td th:text="${f.name}"></td>
-                <td th:text="${f.orgName}"></td>
-                <td th:text="${f.positionName ?: '-'}"></td> <!-- 【新增】 -->
-                <td th:text="${f.phoneNumber}"></td>
-                <td>
-                    <span th:if="${f.auditStatus == 'Approved'}" class="badge bg-success">通过</span>
-                    <span th:if="${f.auditStatus == 'Pending'}" class="badge bg-warning text-dark">待审</span>
-                    <span th:if="${f.auditStatus == 'Rejected'}" class="badge bg-danger">已驳回</span>
-                </td>
-                <td>
-                    <a th:href="@{/admin/personnel/{id}(id=${f.fileId})}" class="btn btn-sm btn-info">查看</a>
-                    <a th:href="@{/admin/personnel/edit/{id}(id=${f.fileId})}" class="btn btn-sm btn-primary">编辑</a>
-                </td>
-            </tr>
-            <tr th:if="${#lists.isEmpty(files)}">
-                <td colspan="7" class="text-center text-muted">未查询到相关档案记录</td>
-            </tr>
-            </tbody>
-        </table>
+            <div class="table-responsive">
+                <table class="table table-striped table-hover">
+                    <thead class="table-light">
+                    <tr>
+                        <th>档案ID</th>
+                        <th>姓名</th>
+                        <th>所属机构</th>
+                        <th>职务</th>
+                        <th>手机号</th>
+                        <th>审核状态</th>
+                        <th class="text-center">操作</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="f : ${files}">
+                        <td th:text="${f.fileId}"></td>
+                        <td th:text="${f.name}"></td>
+                        <td th:text="${f.formattedOrgName}"></td>
+                        <td th:text="${f.positionName ?: '-'}"></td>
+                        <td th:text="${f.phoneNumber}"></td>
+                        <td>
+                            <span th:if="${f.auditStatus == 'Approved'}" class="badge bg-success">通过</span>
+                            <span th:if="${f.auditStatus == 'Pending'}" class="badge bg-warning text-dark">待审</span>
+                            <span th:if="${f.auditStatus == 'Rejected'}" class="badge bg-danger">已驳回</span>
+                        </td>
+                        <td class="text-center">
+                            <a th:onclick="'loadContent(\'/admin/personnel/view/' + ${f.fileId} + '\', this)'" class="btn btn-sm btn-info">
+                                <i class="bi bi-eye"></i> 查看
+                            </a>
+                            <a th:onclick="'loadContent(\'/admin/personnel/edit/' + ${f.fileId} + '\', this)'" class="btn btn-sm btn-primary">
+                                <i class="bi bi-pencil-square"></i> 编辑
+                            </a>
+                            <a href="javascript:void(0);"
+                               th:onclick="'if(confirm(\'确定要删除该档案吗？\')) loadContent(\'/admin/personnel/delete/' + ${f.fileId} + '\', this);'"
+                               class="btn btn-sm btn-danger">
+                                <i class="bi bi-trash"></i> 删除
+                            </a>
+                        </td>
+                    </tr>
+                    <tr th:if="${#lists.isEmpty(files)}">
+                        <td colspan="7" class="text-center text-muted">未查询到相关档案记录</td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
     </div>
 </div>
-<!-- JS for active sidebar -->
-<script>
-    document.addEventListener("DOMContentLoaded", function(){
-        // Simple script to keep sidebar item active
-        const sidebarLinks = document.querySelectorAll('#adminSidebar a');
-        const currentPath = window.location.pathname;
-        sidebarLinks.forEach(link => {
-            if (link.getAttribute('href') === currentPath) {
-                link.classList.add('active');
-            }
-        });
-    });
-</script>
-</body>
-</html>

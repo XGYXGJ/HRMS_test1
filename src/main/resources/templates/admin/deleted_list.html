@@ -1,36 +1,49 @@
-<!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
-<head>
-    <title>已删除档案</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-</head>
-<body>
-<div class="container mt-4">
-    <h3>已删除档案</h3>
-    <a href="/admin/personnel" class="btn btn-secondary mb-3">返回档案列表</a>
-
-    <table class="table table-bordered table-striped">
-        <thead class="table-dark">
-        <tr>
-            <th>档案号</th>
-            <th>姓名</th>
-            <th>机构</th>
-            <th>岗位</th>
-            <th>操作</th>
-        </tr>
-        </thead>
-        <tbody>
-        <tr th:each="file : ${files}">
-            <td th:text="${file.archiveNo}"></td>
-            <td th:text="${file.name}"></td>
-            <td th:text="${file.formattedOrgName}"></td>
-            <td th:text="${file.positionName}"></td>
-            <td>
-                <a th:href="@{/admin/personnel/restore/{id}(id=${file.fileId})}" class="btn btn-success btn-sm" onclick="return confirm('确定要恢复吗？');">恢复</a>
-            </td>
-        </tr>
-        </tbody>
-    </table>
+<div class="container-fluid p-4">
+    <div class="card shadow-sm">
+        <div class="card-header bg-light d-flex justify-content-between align-items-center">
+            <h5 class="mb-0 text-primary">
+                <i class="bi bi-trash-fill me-2"></i>档案回收站
+            </h5>
+            <a onclick="loadContent('/admin/deleted-list', this)" class="btn btn-outline-secondary btn-sm">
+                <i class="bi bi-arrow-repeat me-1"></i>刷新
+            </a>
+        </div>
+        <div class="card-body">
+            <div th:if="${success}" class="alert alert-success alert-dismissible fade show" role="alert">
+                [[${success}]]
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead class="table-light">
+                    <tr>
+                        <th>档案号</th>
+                        <th>姓名</th>
+                        <th>机构</th>
+                        <th>岗位</th>
+                        <th class="text-center">操作</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="file : ${files}">
+                        <td th:text="${file.archiveNo}"></td>
+                        <td th:text="${file.name}"></td>
+                        <td th:text="${file.formattedOrgName}"></td>
+                        <td th:text="${file.positionName}"></td>
+                        <td class="text-center">
+                            <a href="javascript:void(0);"
+                               th:onclick="'if(confirm(\'确定要恢复吗？\')) loadContent(\'/admin/restore/' + ${file.fileId} + '\', this);'"
+                               class="btn btn-success btn-sm">
+                                <i class="bi bi-arrow-counterclockwise"></i> 恢复
+                            </a>
+                        </td>
+                    </tr>
+                    <tr th:if="${#lists.isEmpty(files)}">
+                        <td colspan="5" class="text-center text-muted">回收站为空</td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
 </div>
-</body>
-</html>

@@ -1,107 +1,98 @@
-<!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
-<head>
-    <title>添加机构</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-</head>
-<body>
-<nav class="navbar navbar-dark bg-dark px-3">
-    <a class="navbar-brand" href="#">HR 管理系统</a>
-    <span class="text-white">欢迎，管理员</span>
-</nav>
+<div class="container-fluid p-4">
+    <div class="card shadow-sm">
+        <div class="card-header bg-light d-flex justify-content-between align-items-center">
+            <h5 class="mb-0 text-primary">
+                <i class="bi bi-plus-circle me-2"></i>添加机构
+            </h5>
+            <a onclick="loadContent('/admin/org/list', this)" class="btn btn-secondary btn-sm">
+                <i class="bi bi-arrow-left me-1"></i>返回列表
+            </a>
+        </div>
+        <div class="card-body">
+            <div th:if="${param.success}" class="alert alert-success">机构添加成功！</div>
 
-<div class="d-flex">
-    <!-- 侧边栏 -->
-    <div class="bg-light border-end" style="width: 250px; min-height: 90vh;">
-        <div class="list-group list-group-flush">
-            <a href="/admin/org/add" class="list-group-item list-group-item-action">添加机构</a>
-            <a href="/admin/files" class="list-group-item list-group-item-action">人力资源档案查询</a>
-            <a href="#" class="list-group-item list-group-item-action">分配人事经理(开发中)</a>
-            <a href="/admin/audit/standards" class="list-group-item list-group-item-action">薪酬标准审核</a>
-            <a href="/admin/audit/registers" class="list-group-item list-group-item-action">工资发放审核</a>
+            <form action="/admin/org/save" method="post" class="w-75 mx-auto">
+                <div class="mb-3">
+                    <label class="form-label">机构名称</label>
+                    <input type="text" name="orgName" class="form-control" required>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">机构级别</label>
+                    <select id="levelSelect" name="level" class="form-select" onchange="toggleParents()">
+                        <option value="1">一级机构 (如：总部)</option>
+                        <option value="2">二级机构 (如：分公司)</option>
+                        <option value="3">三级机构 (如：部门)</option>
+                    </select>
+                </div>
+
+                <div id="parentL1Div" class="mb-3" style="display:none;">
+                    <label class="form-label">所属一级机构</label>
+                    <select id="parentL1" class="form-select" onchange="loadL2()">
+                        <option value="">请选择...</option>
+                        <option th:each="org : ${level1Orgs}" th:value="${org.orgId}" th:text="${org.orgName}"></option>
+                    </select>
+                </div>
+
+                <div id="parentL2Div" class="mb-3" style="display:none;">
+                    <label class="form-label">所属二级机构</label>
+                    <select id="parentL2" class="form-select">
+                        <option value="">请选择...</option>
+                    </select>
+                </div>
+
+                <input type="hidden" id="finalParentId" name="parentOrgId">
+
+                <button type="submit" class="btn btn-primary" onclick="setParentId()">
+                    <i class="bi bi-check-lg me-1"></i>提交
+                </button>
+            </form>
         </div>
     </div>
-
-    <!-- 主内容区域 -->
-    <div class="p-4 w-100">
-        <h2>添加机构</h2>
-        <div th:if="${param.success}" class="alert alert-success">机构添加成功！</div>
-
-        <form action="/admin/org/save" method="post" class="w-50">
-            <!-- 原有表单内容保持不变 -->
-            <div class="mb-3">
-                <label class="form-label">机构名称</label>
-                <input type="text" name="orgName" class="form-control" required>
-            </div>
-
-            <div class="mb-3">
-                <label class="form-label">机构级别</label>
-                <select id="levelSelect" name="level" class="form-select" onchange="toggleParents()">
-                    <option value="1">一级机构 (如：总部)</option>
-                    <option value="2">二级机构 (如：分公司)</option>
-                    <option value="3">三级机构 (如：部门)</option>
-                </select>
-            </div>
-
-            <div id="parentL1Div" class="mb-3" style="display:none;">
-                <label class="form-label">所属一级机构</label>
-                <select id="parentL1" class="form-select" onchange="loadL2()">
-                    <option value="">请选择...</option>
-                    <option th:each="org : ${level1Orgs}" th:value="${org.orgId}" th:text="${org.orgName}"></option>
-                </select>
-            </div>
-
-            <div id="parentL2Div" class="mb-3" style="display:none;">
-                <label class="form-label">所属二级机构</label>
-                <select id="parentL2" class="form-select">
-                    <option value="">请选择...</option>
-                </select>
-            </div>
-
-            <input type="hidden" id="finalParentId" name="parentOrgId">
-
-            <button type="submit" class="btn btn-primary" onclick="setParentId()">提交</button>
-            <a href="/admin/dashboard" class="btn btn-secondary">返回</a>
-        </form>
-
-        <script>
-            function toggleParents() {
-                let level = document.getElementById("levelSelect").value;
-                document.getElementById("parentL1Div").style.display = (level > 1) ? "block" : "none";
-                document.getElementById("parentL2Div").style.display = (level > 2) ? "block" : "none";
-            }
-
-            async function loadL2() {
-                let l1Id = document.getElementById("parentL1").value;
-                if(!l1Id) return;
-
-                let response = await fetch('/api/org/children/' + l1Id);
-                let data = await response.json();
-
-                let l2Select = document.getElementById("parentL2");
-                l2Select.innerHTML = '<option value="">请选择...</option>';
-                data.forEach(org => {
-                    let option = document.createElement("option");
-                    option.value = org.orgId;
-                    option.text = org.orgName;
-                    l2Select.appendChild(option);
-                });
-            }
-
-            function setParentId() {
-                let level = document.getElementById("levelSelect").value;
-                let parentIdInput = document.getElementById("finalParentId");
-
-                if (level == 2) {
-                    parentIdInput.value = document.getElementById("parentL1").value;
-                } else if (level == 3) {
-                    parentIdInput.value = document.getElementById("parentL2").value;
-                } else {
-                    parentIdInput.value = null;
-                }
-            }
-        </script>
-    </div>
 </div>
-</body>
-</html>
+
+<script>
+    'use strict';
+    (function() {
+        function toggleParents() {
+            let level = document.getElementById("levelSelect").value;
+            document.getElementById("parentL1Div").style.display = (level > 1) ? "block" : "none";
+            document.getElementById("parentL2Div").style.display = (level > 2) ? "block" : "none";
+        }
+
+        async function loadL2() {
+            let l1Id = document.getElementById("parentL1").value;
+            if(!l1Id) return;
+
+            let response = await fetch('/api/org/children/' + l1Id, {credentials: 'include'});
+            let data = await response.json();
+
+            let l2Select = document.getElementById("parentL2");
+            l2Select.innerHTML = '<option value="">请选择...</option>';
+            data.forEach(org => {
+                let option = document.createElement("option");
+                option.value = org.orgId;
+                option.text = org.orgName;
+                l2Select.appendChild(option);
+            });
+        }
+
+        function setParentId() {
+            let level = document.getElementById("levelSelect").value;
+            let parentIdInput = document.getElementById("finalParentId");
+
+            if (level == 2) {
+                parentIdInput.value = document.getElementById("parentL1").value;
+            } else if (level == 3) {
+                parentIdInput.value = document.getElementById("parentL2").value;
+            } else {
+                parentIdInput.value = null;
+            }
+        }
+
+        // Attach functions to window object to make them accessible from HTML
+        window.toggleParents = toggleParents;
+        window.loadL2 = loadL2;
+        window.setParentId = setParentId;
+    })();
+</script>
