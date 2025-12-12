@@ -1,37 +1,65 @@
-<!-- src/main/resources/templates/hr/personnel_form.html -->
-<!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
-<head>
-    <title>新建员工档案</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-</head>
-<body class="p-4">
-<h3>新建员工档案 (人事经理)</h3>
-<a href="/hr/files" class="btn btn-secondary mb-3">返回列表</a>
+<div class="container-fluid p-4">
+    <div class="card shadow-sm">
+        <div class="card-header bg-light d-flex justify-content-between align-items-center">
+            <h5 class="mb-0 text-primary">
+                <i class="bi bi-file-person me-2"></i> 新建员工档案
+            </h5>
+            <div>
+                <a onclick="loadContent('/hr/personnel/list', this)" class="btn btn-secondary btn-sm">
+                    <i class="bi bi-arrow-left me-1"></i> 返回列表
+                </a>
+            </div>
+        </div>
+        <div class="card-body">
+            <div th:if="${error}" class="alert alert-danger alert-dismissible fade show" role="alert">
+                <i class="bi bi-exclamation-triangle me-2"></i><span th:text="${error}"></span>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
 
-<div th:if="${error}" class="alert alert-danger" th:text="${error}"></div>
+            <form method="post" th:action="@{/hr/personnel/new}" class="w-75 mx-auto">
+                <h5 class="mb-3 text-primary"><i class="bi bi-info-circle me-2"></i>基本信息</h5>
+                <div class="mb-3">
+                    <label class="form-label"><i class="bi bi-person me-1"></i>姓名 <span class="text-danger">*</span></label>
+                    <input name="name" class="form-control" required/>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label"><i class="bi bi-gender-ambiguous me-1"></i>性别</label>
+                    <select name="gender" class="form-select">
+                        <option value="男">男</option>
+                        <option value="女">女</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label"><i class="bi bi-credit-card me-1"></i>身份证号</label>
+                    <input name="idNumber" class="form-control"/>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label"><i class="bi bi-telephone me-1"></i>手机号</label>
+                    <input name="phoneNumber" class="form-control"/>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label"><i class="bi bi-house me-1"></i>地址</label>
+                    <input name="address" class="form-control"/>
+                </div>
 
-<form method="post" th:action="@{/hr/files/new}" class="w-50">
-    <!-- 基本信息字段，同管理员版本 -->
-    <div class="mb-3"><label class="form-label">姓名</label><input name="name" class="form-control" required/></div>
-    <div class="mb-3"><label class="form-label">性别</label><select name="gender" class="form-select"><option value="男">男</option><option value="女">女</option></select></div>
-    <div class="mb-3"><label class="form-label">身份证号</label><input name="idNumber" class="form-control"/></div>
-    <div class="mb-3"><label class="form-label">手机号</label><input name="phoneNumber" class="form-control"/></div>
-    <div class="mb-3"><label class="form-label">地址</label><input name="address" class="form-control"/></div>
+                <hr class="my-4">
+                <h5 class="mb-3 text-primary"><i class="bi bi-briefcase me-2"></i>职位分配</h5>
+                <div class="alert alert-info">
+                    <i class="bi bi-building me-1"></i>新员工将自动归属到您所在的部门：<strong th:text="${session.user.l3OrgId}"></strong>
+                </div>
 
-    <hr>
-    <h5>职位分配</h5>
-    <div class="alert alert-secondary">新员工将自动归属到您所在的部门：<strong th:text="${session.user.l3OrgId}"></strong></div>
+                <div class="mb-3">
+                    <label for="positionId" class="form-label"><i class="bi bi-check-circle me-1"></i>分配职位 <span class="text-danger">*</span></label>
+                    <select id="positionId" name="positionId" class="form-select" required>
+                        <option value="">-- 请选择职位 --</option>
+                        <option th:each="pos : ${positions}" th:value="${pos.positionId}" th:text="${pos.positionName}"></option>
+                    </select>
+                </div>
 
-    <div class="mb-3">
-        <label for="positionId" class="form-label">分配职位 <span class="text-danger">*</span></label>
-        <select id="positionId" name="positionId" class="form-select" required>
-            <option value="">-- 请选择职位 --</option>
-            <option th:each="pos : ${positions}" th:value="${pos.positionId}" th:text="${pos.positionName}"></option>
-        </select>
+                <button type="submit" class="btn btn-success">
+                    <i class="bi bi-check-lg me-1"></i>确认创建
+                </button>
+            </form>
+        </div>
     </div>
-
-    <button type="submit" class="btn btn-primary">确认创建</button>
-</form>
-</body>
-</html>
+</div>

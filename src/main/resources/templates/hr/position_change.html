@@ -1,88 +1,88 @@
-<!DOCTYPE html>
-<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
-<head>
-    <meta charset="UTF-8">
-    <title>员工职位调整</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <style>
-        body {
-            padding: 20px;
-        }
-    </style>
-</head>
-<body>
+<div class="container-fluid p-4">
+    <div class="card shadow-sm">
+        <div class="card-header bg-light">
+            <h5 class="mb-0 text-primary"><i class="bi bi-person-badge-fill me-2"></i>员工职位调整</h5>
+        </div>
+        <div class="card-body">
+            <div th:if="${success}" class="alert alert-success" th:text="${success}"></div>
+            <div th:if="${error}" class="alert alert-danger" th:text="${error}"></div>
 
-<div class="container">
-    <h3>员工职位调整</h3>
-    <a th:href="@{/hr/dashboard}" class="btn btn-secondary mb-3">返回工作台</a>
-
-    <div th:if="${success}" class="alert alert-success" th:text="${success}"></div>
-    <div th:if="${error}" class="alert alert-danger" th:text="${error}"></div>
-
-    <form method="post" th:action="@{/hr/positions/change}">
-        <div class="row">
-            <div class="col-md-6">
-                <div class="mb-3">
-                    <label for="userId" class="form-label">选择员工</label>
-                    <select id="userId" name="userId" class="form-select" required>
-                        <option th:each="employee : ${employees}" th:value="${employee.userId}" th:text="${employee.name}"></option>
-                    </select>
+            <form method="post" th:action="@{/hr/position/change}">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="userId" class="form-label"><i class="bi bi-person-check me-1"></i>选择员工</label>
+                            <select id="userId" name="userId" class="form-select" required>
+                                <option value="">-- 请选择 --</option>
+                                <option th:each="employee : ${employees}" th:value="${employee.userId}" th:text="${employee.name}"></option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="positionId" class="form-label"><i class="bi bi-arrow-right-square me-1"></i>选择新职位</label>
+                            <select id="positionId" name="positionId" class="form-select" required>
+                                <option value="">-- 请选择 --</option>
+                                <option th:each="position : ${positions}" th:value="${position.positionId}" th:text="${position.positionName}"></option>
+                            </select>
+                        </div>
+                    </div>
                 </div>
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-check-circle me-1"></i>确认调整
+                </button>
+                <a onclick="loadContent('/hr/position/change', this)" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-repeat me-1"></i>刷新
+                </a>
+            </form>
+        </div>
+    </div>
+
+    <div class="card shadow-sm mt-4">
+        <div class="card-header bg-light">
+            <h5 class="mb-0 text-primary"><i class="bi bi-search me-2"></i>员工选择列表</h5>
+        </div>
+        <div class="card-body">
+            <div class="mb-3">
+                <input id="search-input" placeholder="按姓名/当前岗位搜索" class="form-control d-inline-block" style="width: 300px;" />
             </div>
-            <div class="col-md-6">
-                <div class="mb-3">
-                    <label for="positionId" class="form-label">选择新职位</label>
-                    <select id="positionId" name="positionId" class="form-select" required>
-                        <option th:each="position : ${positions}" th:value="${position.positionId}" th:text="${position.positionName}"></option>
-                    </select>
-                </div>
+            <div class="table-responsive">
+                <table class="table table-hover" id="employee-table">
+                    <thead class="table-light">
+                    <tr>
+                        <th>档案号</th>
+                        <th>姓名</th>
+                        <th>当前岗位</th>
+                        <th>操作</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <!-- 员工数据将通过API动态加载 -->
+                    </tbody>
+                </table>
             </div>
         </div>
-        <button type="submit" class="btn btn-primary">确认调整</button>
-    </form>
-
-    <hr class="my-4">
-
-    <div>
-        <h3>员工选择列表</h3>
-        <div class="mb-3">
-            <input id="search-input" placeholder="按姓名/当前岗位搜索" class="form-control d-inline-block" style="width: 300px;" />
-            <button id="search-btn" class="btn btn-primary">搜索</button>
-        </div>
-
-        <table class="table table-striped" id="employee-table">
-            <thead>
-            <tr>
-                <th>档案号</th>
-                <th>姓名</th>
-                <th>当前岗位</th>
-                <th>操作</th>
-            </tr>
-            </thead>
-            <tbody>
-            <!-- 员工数据将通过API动态加载 -->
-            </tbody>
-        </table>
     </div>
 </div>
 
 <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        const searchBtn = document.getElementById('search-btn');
+    (function() {
         const searchInput = document.getElementById('search-input');
         const employeeTableBody = document.querySelector('#employee-table tbody');
 
-        function fetchEmployees(name, position) {
-            let url = '/api/employees';
-            const params = new URLSearchParams();
-            if (name) params.append('name', name);
-            if (position) params.append('position', position);
-            if (params.toString()) {
-                url += '?' + params.toString();
+        function fetchEmployees(query) {
+            let url = '/api/hr/employees';
+            if (query) {
+                url += '?q=' + encodeURIComponent(query);
             }
 
-            fetch(url)
-                .then(response => response.json())
+            fetch(url, {credentials: 'include'})
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    return response.json();
+                })
                 .then(data => {
                     employeeTableBody.innerHTML = '';
                     data.forEach(employee => {
@@ -90,7 +90,7 @@
                             <tr>
                                 <td>${employee.archiveNo}</td>
                                 <td>${employee.name}</td>
-                                <td>${employee.position}</td>
+                                <td>${employee.positionName}</td>
                                 <td>
                                     <button class="btn btn-sm btn-primary" onclick="selectEmployee(${employee.userId}, '${employee.name}')">选择</button>
                                 </td>
@@ -102,39 +102,27 @@
                 .catch(error => console.error('Error fetching employees:', error));
         }
 
-        searchBtn.addEventListener('click', () => {
-            const searchTerm = searchInput.value.trim();
-            // A simple way to distinguish between name and position, you might need a more robust solution
-            const isPosition = searchTerm.includes('师') || searchTerm.includes('经理') || searchTerm.includes('专员');
-            if (isPosition) {
-                fetchEmployees(null, searchTerm);
-            } else {
-                fetchEmployees(searchTerm, null);
-            }
+        searchInput.addEventListener('input', () => {
+            fetchEmployees(searchInput.value.trim());
         });
+
+        window.selectEmployee = function(userId, name) {
+            const select = document.getElementById('userId');
+            let found = false;
+            for (let i = 0; i < select.options.length; i++) {
+                if (select.options[i].value == userId) {
+                    select.selectedIndex = i;
+                    found = true;
+                    break;
+                }
+            }
+            if (!found) {
+                const newOption = new Option(name, userId, true, true);
+                select.add(newOption);
+            }
+        }
 
         // Initial load
         fetchEmployees();
-    });
-
-    function selectEmployee(userId, name) {
-        const select = document.getElementById('userId');
-        // Check if the employee is already in the dropdown
-        let found = false;
-        for (let i = 0; i < select.options.length; i++) {
-            if (select.options[i].value == userId) {
-                select.selectedIndex = i;
-                found = true;
-                break;
-            }
-        }
-        // If not, add them
-        if (!found) {
-            const newOption = new Option(name, userId, true, true);
-            select.add(newOption);
-        }
-    }
+    })();
 </script>
-
-</body>
-</html>

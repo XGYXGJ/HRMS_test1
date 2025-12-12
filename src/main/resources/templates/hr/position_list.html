@@ -1,64 +1,77 @@
-<!-- src/main/resources/templates/hr/position_list.html -->
-<!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
-<head>
-    <title>职位管理</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-</head>
-<body>
-<div class="container mt-4">
-    <h3>本机构职位管理</h3>
-    <a href="/hr/dashboard" class="btn btn-secondary mb-3">返回工作台</a>
-
-    <div th:if="${param.success}" class="alert alert-success">职位创建成功！</div>
-    <div th:if="${error}" class="alert alert-danger" th:text="${error}"></div>
-
-    <!-- 新建职位表单 (保持不变) -->
-    <div class="card mb-4">
-        <div class="card-header"><h4>新建职位</h4></div>
-        <div class="card-body">
-            <form th:action="@{/hr/positions/save}" method="post" th:object="${newPosition}">
-                <div class="mb-3">
-                    <label for="positionName" class="form-label">职位名称</label>
-                    <input type="text" id="positionName" th:field="*{positionName}" class="form-control" required>
+<div class="container-fluid p-4">
+    <div class="row">
+        <!-- 新建职位 -->
+        <div class="col-md-4">
+            <div class="card shadow-sm">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0 text-primary"><i class="bi bi-plus-square-dotted me-2"></i>新建职位</h5>
                 </div>
-                <button type="submit" class="btn btn-primary">添加职位</button>
-            </form>
+                <div class="card-body">
+                    <form th:action="@{/hr/position/save}" method="post" th:object="${newPosition}">
+                        <div class="mb-3">
+                            <label for="positionName" class="form-label">职位名称</label>
+                            <input type="text" id="positionName" th:field="*{positionName}" class="form-control" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary"><i class="bi bi-plus-circle me-1"></i>添加职位</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- 职位列表 -->
+        <div class="col-md-8">
+            <div class="card shadow-sm">
+                <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0 text-primary"><i class="bi bi-list-ul me-2"></i>现有职位列表</h5>
+                    <a onclick="loadContent('/hr/position/list', this)" class="btn btn-outline-secondary btn-sm">
+                        <i class="bi bi-arrow-repeat me-1"></i>刷新
+                    </a>
+                </div>
+                <div class="card-body">
+                    <div th:if="${success}" class="alert alert-success alert-dismissible fade show" role="alert">
+                        [[${success}]]
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                    <div th:if="${error}" class="alert alert-danger alert-dismissible fade show" role="alert">
+                        [[${error}]]
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead class="table-light">
+                            <tr>
+                                <th>职位ID</th>
+                                <th>职位名称</th>
+                                <th class="text-center">在职人数</th>
+                                <th class="text-center">操作</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            <tr th:each="pos : ${positions}">
+                                <td th:text="${pos.positionId}"></td>
+                                <td th:text="${pos.positionName}"></td>
+                                <td class="text-center">
+                                    <a th:onclick="'loadContent(\'/hr/position/' + ${pos.positionId} + '/employees\', this)'" class="btn btn-link p-0">
+                                        <span th:text="${employeeCounts.getOrDefault(pos.positionId, 0L)}">0</span>
+                                    </a>
+                                </td>
+                                <td class="text-center">
+                                    <a href="javascript:void(0);"
+                                       th:onclick="'if(confirm(\'警告：删除职位可能导致关联员工的职位信息丢失，确定吗？\')) loadContent(\'/hr/position/delete/' + ${pos.positionId} + '\', this);'"
+                                       class="btn btn-danger btn-sm">
+                                        <i class="bi bi-trash"></i> 删除
+                                    </a>
+                                </td>
+                            </tr>
+                            <tr th:if="${#lists.isEmpty(positions)}">
+                                <td colspan="4" class="text-center text-muted">暂无自定义职位，请在左侧添加。</td>
+                            </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
-
-    <!-- 职位列表 (已修改) -->
-    <h4>现有职位列表</h4>
-    <table class="table table-striped">
-        <thead>
-        <tr>
-            <th>职位ID</th>
-            <th>职位名称</th>
-            <th>在职人数</th> <!-- 新增表头 -->
-            <th>操作</th>
-        </tr>
-        </thead>
-        <tbody>
-        <tr th:each="pos : ${positions}">
-            <td th:text="${pos.positionId}"></td>
-            <td th:text="${pos.positionName}"></td>
-            <!-- 新增单元格，用于显示人数和链接 -->
-            <td>
-                <a th:href="@{/hr/positions/{id}/employees(id=${pos.positionId})}" class="btn btn-link p-0">
-                    <span th:text="${employeeCounts.getOrDefault(pos.positionId, 0L)}">0</span>
-                </a>
-            </td>
-            <td>
-                <a th:href="@{/hr/positions/delete/{id}(id=${pos.positionId})}"
-                   class="btn btn-danger btn-sm"
-                   onclick="return confirm('警告：删除职位可能导致关联员工的职位信息丢失，确定吗？')">删除</a>
-            </td>
-        </tr>
-        <tr th:if="${#lists.isEmpty(positions)}">
-            <td colspan="4" class="text-center text-muted">暂无自定义职位，请在上方添加。</td>
-        </tr>
-        </tbody>
-    </table>
 </div>
-</body>
-</html>

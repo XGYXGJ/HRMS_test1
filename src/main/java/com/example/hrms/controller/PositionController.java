@@ -1,5 +1,3 @@
-// src/main/java/com/example/hrms/controller/PositionController.java
-
 package com.example.hrms.controller;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
@@ -16,27 +14,25 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
 @Controller
-@RequestMapping("/hr/positions") // 路径归属到人事经理下
+@RequestMapping("/hr/position")
 public class PositionController {
 
     @Autowired
     private PositionMapper positionMapper;
 
-    @Autowired // 新增注入
+    @Autowired
     private UserMapper userMapper;
 
-    @Autowired // 新增注入
+    @Autowired
     private PersonnelFileMapper personnelFileMapper;
 
-    /**
-     * 职位列表页面 (已增强)
-     */
-    @GetMapping
+    @GetMapping("/list")
     public String listPositions(HttpSession session, Model model) {
         User currentUser = (User) session.getAttribute("user");
         if (currentUser == null || currentUser.getL3OrgId() == null) {
@@ -48,12 +44,10 @@ public class PositionController {
                 new QueryWrapper<Position>().eq("L3_Org_ID", currentUser.getL3OrgId())
         );
 
-        // --- 新增逻辑：查询职位人数 ---
         if (!positions.isEmpty()) {
             List<Integer> positionIds = positions.stream().map(Position::getPositionId).collect(Collectors.toList());
             List<Map<String, Object>> counts = positionMapper.countEmployeesByPositionIds(positionIds);
 
-            // 将人数转换为 Map<PositionID, Count> 以便快速查找
             Map<Integer, Long> countMap = counts.stream()
                     .collect(Collectors.toMap(
                             map -> (Integer) map.get("positionId"),
@@ -61,33 +55,26 @@ public class PositionController {
                     ));
             model.addAttribute("employeeCounts", countMap);
         }
-        // --- 结束新增逻辑 ---
 
         model.addAttribute("positions", positions);
-        model.addAttribute("newPosition", new Position()); // 用于新建表单
+        model.addAttribute("newPosition", new Position());
         return "hr/position_list";
     }
 
-    /**
-     * 新增：查看某个职位下的所有员工
-     */
     @GetMapping("/{id}/employees")
     public String viewPositionEmployees(@PathVariable("id") Integer positionId, HttpSession session, Model model) {
         User currentUser = (User) session.getAttribute("user");
         Position position = positionMapper.selectById(positionId);
 
-        // 安全校验：确保职位存在且属于当前人事经理的机构
         if (position == null || !position.getL3OrgId().equals(currentUser.getL3OrgId())) {
-            return "redirect:/hr/positions?error=access_denied";
+            return "redirect:/hr/position/list?error=access_denied";
         }
 
-        // 查询该职位下的所有有效用户
         List<User> users = userMapper.selectList(new QueryWrapper<User>()
                 .eq("Position_ID", positionId)
                 .eq("L3_Org_ID", currentUser.getL3OrgId())
                 .eq("Is_Deleted", 0));
 
-        // 根据用户ID列表查询对应的档案信息
         List<PersonnelFile> employeeFiles = new ArrayList<>();
         if (!users.isEmpty()) {
             List<Integer> userIds = users.stream().map(User::getUserId).collect(Collectors.toList());
@@ -96,36 +83,109 @@ public class PositionController {
 
         model.addAttribute("position", position);
         model.addAttribute("employeeFiles", employeeFiles);
-        return "hr/position_employees"; // 指向新增的视图文件
+        return "hr/position_employees";
     }
 
-
-    /**
-     * 保存新职位 (无需修改)
-     */
     @PostMapping("/save")
     public String savePosition(@ModelAttribute Position newPosition, HttpSession session, Model model) {
         User currentUser = (User) session.getAttribute("user");
         if (currentUser == null || currentUser.getL3OrgId() == null) {
             model.addAttribute("error", "非法操作，无法获取您的机构信息");
-            return "redirect:/hr/positions";
+            return "redirect:/hr/position/list";
         }
         newPosition.setL3OrgId(currentUser.getL3OrgId());
         newPosition.setAuthLevel("Employee");
         positionMapper.insert(newPosition);
-        return "redirect:/hr/positions?success";
+        return "redirect:/hr/position/list?success";
     }
 
-    /**
-     * 删除职位 (无需修改)
-     */
     @GetMapping("/delete/{id}")
-    public String deletePosition(@PathVariable Integer id, HttpSession session) {
+    public String deletePosition(@PathVariable Integer id, HttpSession session, Model model) {
         User currentUser = (User) session.getAttribute("user");
         Position position = positionMapper.selectById(id);
+
         if (position != null && position.getL3OrgId().equals(currentUser.getL3OrgId())) {
-            positionMapper.deleteById(id);
+            // Check if any user is assigned to this position
+            long userCount = userMapper.selectCount(new QueryWrapper<User>().eq("Position_ID", id).eq("Is_Deleted", 0));
+            if (userCount > 0) {
+                model.addAttribute("error", "无法删除，该职位下还有 " + userCount + " 名员工。请先调整员工职位。");
+            } else {
+                positionMapper.deleteById(id);
+                model.addAttribute("success", "职位删除成功！");
+            }
+        } else {
+             model.addAttribute("error", "权限不足或职位不存在！");
         }
-        return "redirect:/hr/positions";
+
+        // Instead of redirecting, call the list method to return the updated fragment
+        return listPositions(session, model);
+    }
+
+    @GetMapping("/change")
+    public String showPositionChangePage(HttpSession session, Model model) {
+        User user = (User) session.getAttribute("user");
+
+        List<String> excludedPositions = Arrays.asList("人事经理", "薪酬经理");
+        List<Integer> excludedPositionIds = positionMapper.selectList(
+                new QueryWrapper<Position>().in("Position_Name", excludedPositions)
+        ).stream().map(Position::getPositionId).collect(Collectors.toList());
+
+        QueryWrapper<User> userQuery = new QueryWrapper<User>()
+                .eq("L3_Org_ID", user.getL3OrgId());
+        if (!excludedPositionIds.isEmpty()) {
+            userQuery.notIn("Position_ID", excludedPositionIds);
+        }
+        List<User> users = userMapper.selectList(userQuery);
+
+        List<Integer> userIds = users.stream().map(User::getUserId).collect(Collectors.toList());
+        List<PersonnelFile> employees = new ArrayList<>();
+        if(!userIds.isEmpty()){
+            employees = personnelFileMapper.selectList(new QueryWrapper<PersonnelFile>().in("User_ID", userIds));
+        }
+
+        List<Position> positions = positionMapper.selectList(new QueryWrapper<Position>().eq("L3_Org_ID", user.getL3OrgId()));
+
+        model.addAttribute("employees", employees);
+        model.addAttribute("positions", positions);
+        return "hr/position_change";
+    }
+
+    @PostMapping("/change")
+    public String changePosition(@RequestParam Integer userId, @RequestParam Integer positionId, HttpSession session, Model model) {
+        User user = (User) session.getAttribute("user");
+        User employee = userMapper.selectById(userId);
+
+        if (employee == null || !employee.getL3OrgId().equals(user.getL3OrgId())) {
+            model.addAttribute("error", "无法操作非本机构的员工");
+        } else {
+            employee.setPositionId(positionId);
+            userMapper.updateById(employee);
+            model.addAttribute("success", "职位调整成功");
+        }
+
+        // reload data for the page
+        List<String> excludedPositions = Arrays.asList("人事经理", "薪酬经理");
+        List<Integer> excludedPositionIds = positionMapper.selectList(
+                new QueryWrapper<Position>().in("Position_Name", excludedPositions)
+        ).stream().map(Position::getPositionId).collect(Collectors.toList());
+
+        QueryWrapper<User> userQuery = new QueryWrapper<User>()
+                .eq("L3_Org_ID", user.getL3OrgId());
+        if (!excludedPositionIds.isEmpty()) {
+            userQuery.notIn("Position_ID", excludedPositionIds);
+        }
+        List<User> users = userMapper.selectList(userQuery);
+
+        List<Integer> userIds = users.stream().map(User::getUserId).collect(Collectors.toList());
+        List<PersonnelFile> employees = new ArrayList<>();
+        if(!userIds.isEmpty()){
+            employees = personnelFileMapper.selectList(new QueryWrapper<PersonnelFile>().in("User_ID", userIds));
+        }
+        List<Position> positions = positionMapper.selectList(new QueryWrapper<Position>().eq("L3_Org_ID", user.getL3OrgId()));
+
+        model.addAttribute("employees", employees);
+        model.addAttribute("positions", positions);
+
+        return "hr/position_change";
     }
 }

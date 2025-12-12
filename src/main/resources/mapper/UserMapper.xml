@@ -82,4 +82,25 @@
             </if>
         </where>
     </select>
+
+    <select id="searchUsersByOrgAndQuery" resultType="com.example.hrms.dto.UserDTO">
+        SELECT
+        u.User_ID as userId,
+        pf.Archive_No as archiveNo,
+        pf.Name as name,
+        p.Position_Name as positionName
+        FROM
+        T_User u
+        JOIN
+        T_Personnel_File pf ON u.User_ID = pf.User_ID
+        LEFT JOIN
+        T_Position p ON u.Position_ID = p.Position_ID
+        <where>
+            u.L3_Org_ID = #{orgId}
+            AND (p.Position_Name IS NULL OR p.Position_Name NOT IN ('人事经理', '薪酬经理'))
+            <if test="q != null and q != ''">
+                AND (pf.Name LIKE CONCAT('%', #{q}, '%') OR p.Position_Name LIKE CONCAT('%', #{q}, '%'))
+            </if>
+        </where>
+    </select>
 </mapper>

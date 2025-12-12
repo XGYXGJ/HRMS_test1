@@ -1,73 +1,46 @@
-<!DOCTYPE html>
-<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
-<head>
-    <meta charset="UTF-8">
-    <title>员工考勤管理</title>
-    <!-- Bootstrap CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- FullCalendar CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.css" rel="stylesheet">
-    <style>
-        body {
-            padding: 20px;
-        }
-        /* 自定义打卡记录样式 */
-        .attendance-event {
-            border: none !important;
-            text-align: center;
-        }
-        .attendance-present {
-            background-color: #28a745 !important; /* 深绿色 */
-            color: white !important;
-        }
-        /* 调整 FullCalendar 今天的默认背景色，避免混淆 */
-        .fc-day-today {
-            background-color: #fff3cd !important; /* 浅黄色 */
-        }
-        .modal-dialog {
-            max-width: 800px;
-        }
-    </style>
-</head>
-<body>
-
-<div class="container">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h4>员工考勤管理</h4>
-        <a th:href="@{/hr/dashboard}" class="btn btn-secondary">返回工作台</a>
-    </div>
-
-    <!-- Employee List Table -->
-    <div class="card">
+<div class="container-fluid p-4">
+    <div class="card shadow-sm">
+        <div class="card-header bg-light d-flex justify-content-between align-items-center">
+            <h5 class="mb-0 text-primary"><i class="bi bi-calendar-check-fill me-2"></i>员工考勤管理</h5>
+            <a onclick="loadContent('/hr/attendance/management', this)" class="btn btn-outline-secondary btn-sm">
+                <i class="bi bi-arrow-repeat me-1"></i>刷新
+            </a>
+        </div>
         <div class="card-body">
-            <table class="table table-hover">
-                <thead>
-                <tr>
-                    <th>姓名</th>
-                    <th>职位</th>
-                    <th>所属机构</th>
-                    <th>操作</th>
-                </tr>
-                </thead>
-                <tbody>
-                <tr th:each="employee : ${employees}">
-                    <td th:text="${employee.name}"></td>
-                    <td th:text="${employee.positionName}"></td>
-                    <td th:text="${employee.orgName}"></td>
-                    <td>
-                        <button class="btn btn-sm btn-info" th:onclick="|openCalendar(${employee.userId}, 'view')|">查看考勤</button>
-                        <button class="btn btn-sm btn-warning" th:onclick="|openCalendar(${employee.userId}, 'proxy')|">代打卡</button>
-                    </td>
-                </tr>
-                </tbody>
-            </table>
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead class="table-light">
+                    <tr>
+                        <th>姓名</th>
+                        <th>职位</th>
+                        <th>所属机构</th>
+                        <th class="text-center">操作</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="employee : ${employees}">
+                        <td th:text="${employee.name}"></td>
+                        <td th:text="${employee.positionName}"></td>
+                        <td th:text="${employee.orgName}"></td>
+                        <td class="text-center">
+                            <button class="btn btn-sm btn-info" th:onclick="|openCalendar(${employee.userId}, 'view')|">
+                                <i class="bi bi-calendar-event"></i> 查看考勤
+                            </button>
+                            <button class="btn btn-sm btn-warning" th:onclick="|openCalendar(${employee.userId}, 'proxy')|">
+                                <i class="bi bi-hand-index-thumb"></i> 代打卡
+                            </button>
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
 </div>
 
 <!-- Calendar Modal -->
 <div class="modal fade" id="calendarModal" tabindex="-1" aria-labelledby="calendarModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
+    <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title" id="calendarModalLabel">员工考勤日历</h5>
@@ -80,115 +53,131 @@
     </div>
 </div>
 
-<!-- Bootstrap JS Bundle (includes Popper) -->
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-<!-- FullCalendar JS -->
-<script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/locales/zh-cn.js"></script>
-
 <script>
-    let calendar;
-    let currentUserId;
-    let currentMode; // 'view' or 'proxy'
-    let calendarModal;
+    'use strict';
+    (function() {
+        let calendar;
+        let currentUserId;
+        let currentMode; // 'view' or 'proxy'
+        let calendarModal;
 
-    document.addEventListener('DOMContentLoaded', function() {
-        const calendarEl = document.getElementById('calendar');
-        // Initialize Bootstrap Modal
-        calendarModal = new bootstrap.Modal(document.getElementById('calendarModal'));
+        function initializeCalendar() {
+            const calendarEl = document.getElementById('calendar');
+            if (!calendarEl) return;
 
-        calendar = new FullCalendar.Calendar(calendarEl, {
-            initialView: 'dayGridMonth',
-            locale: 'zh-cn',
-            headerToolbar: {
-                left: 'prev,next today',
-                center: 'title',
-                right: 'dayGridMonth'
-            },
-            events: [], // Initially empty
-            dateClick: function(info) {
-                if (currentMode === 'proxy') {
-                    handleProxyPunch(info.dateStr);
-                }
+            if (calendarModal) {
+                calendarModal.dispose();
             }
-        });
-        calendar.render();
+            calendarModal = new bootstrap.Modal(document.getElementById('calendarModal'));
 
-        // Re-render calendar when modal is shown to fix layout issues
-        document.getElementById('calendarModal').addEventListener('shown.bs.modal', function () {
-            calendar.updateSize();
-        });
-    });
-
-    function openCalendar(userId, mode) {
-        currentUserId = userId;
-        currentMode = mode;
-
-        const modalTitle = document.getElementById('calendarModalLabel');
-        modalTitle.textContent = mode === 'view' ? '查看考勤记录' : '代打卡操作 (点击日期进行打卡/取消)';
-
-        // Fetch attendance data for the user
-        fetch(`/hr/api/attendance/${userId}`)
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
+            if (calendar) {
+                calendar.destroy();
+            }
+            calendar = new FullCalendar.Calendar(calendarEl, {
+                initialView: 'dayGridMonth',
+                locale: 'zh-cn',
+                headerToolbar: {
+                    left: 'prev,next today',
+                    center: 'title',
+                    right: 'dayGridMonth'
+                },
+                events: [],
+                dateClick: function(info) {
+                    if (currentMode === 'proxy') {
+                        window.handleProxyPunch(info.dateStr);
+                    }
                 }
-                return response.json();
-            })
-            .then(records => {
-                if (!Array.isArray(records)) {
-                    console.error("Expected array but got:", records);
-                    alert("获取考勤数据失败：服务器返回格式错误");
-                    return;
-                }
-
-                const events = records.map(record => ({
-                    title: '已打卡', // 显示文字
-                    start: record.attendanceDate,
-                    display: 'block', // 块级显示
-                    classNames: ['attendance-event', 'attendance-present']
-                }));
-                calendar.removeAllEvents();
-                calendar.addEventSource(events);
-                calendarModal.show();
-            })
-            .catch(error => {
-                console.error('Error fetching attendance data:', error);
-                alert('获取考勤数据失败，请查看控制台日志');
             });
-    }
+            calendar.render();
 
-    function handleProxyPunch(dateStr) {
-        if (!confirm(`确定要为该员工在 ${dateStr} 进行打卡/取消打卡操作吗？`)) {
-            return;
+            document.getElementById('calendarModal').addEventListener('shown.bs.modal', function () {
+                calendar.updateSize();
+            });
         }
 
-        fetch('/hr/api/attendance/proxy', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                userId: currentUserId,
-                date: dateStr
-            })
-        })
-        .then(response => response.json())
-        .then(result => {
-            if (result.success) {
-                alert('操作成功！');
-                // Refresh calendar events
-                openCalendar(currentUserId, currentMode);
-            } else {
-                alert('操作失败: ' + result.message);
-            }
-        })
-        .catch(error => {
-            console.error('Error during proxy punch:', error);
-            alert('操作发生错误');
-        });
-    }
-</script>
+        window.openCalendar = function(userId, mode) {
+            currentUserId = userId;
+            currentMode = mode;
 
-</body>
-</html>
+            const modalTitle = document.getElementById('calendarModalLabel');
+            modalTitle.textContent = mode === 'view' ? '查看考勤记录' : '代打卡操作 (点击日期进行打卡/取消)';
+
+            fetch(`/api/hr/attendance/${userId}`, {credentials: 'include'})
+                .then(response => {
+                    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                    return response.json();
+                })
+                .then(records => {
+                    if (!Array.isArray(records)) {
+                        console.error("Expected array but got:", records);
+                        alert("获取考勤数据失败：服务器返回格式错误");
+                        return;
+                    }
+
+                    const events = records.map(record => ({
+                        title: '已打卡',
+                        start: record.attendanceDate,
+                        display: 'block',
+                        classNames: ['attendance-event', 'attendance-present']
+                    }));
+                    calendar.removeAllEvents();
+                    calendar.addEventSource(events);
+                    calendarModal.show();
+                })
+                .catch(error => {
+                    console.error('Error fetching attendance data:', error);
+                    alert('获取考勤数据失败，请查看控制台日志');
+                });
+        }
+
+        window.handleProxyPunch = function(dateStr) {
+            if (!confirm(`确定要为该员工在 ${dateStr} 进行打卡/取消打卡操作吗？`)) {
+                return;
+            }
+
+            fetch('/api/hr/attendance/proxy', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    userId: currentUserId,
+                    date: dateStr
+                }),
+                credentials: 'include'
+            })
+            .then(response => response.json())
+            .then(result => {
+                if (result.success) {
+                    alert('操作成功！');
+                    window.openCalendar(currentUserId, currentMode);
+                } else {
+                    alert('操作失败: ' + result.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error during proxy punch:', error);
+                alert('操作发生错误');
+            });
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initializeCalendar);
+        } else {
+            initializeCalendar();
+        }
+    })();
+</script>
+<style>
+    .attendance-event {
+        border: none !important;
+        text-align: center;
+        color: white !important;
+    }
+    .attendance-present {
+        background-color: #28a745 !important;
+    }
+    .fc-day-today {
+        background-color: #fff3cd !important;
+    }
+</style>

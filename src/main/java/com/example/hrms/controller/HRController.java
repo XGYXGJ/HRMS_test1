@@ -19,14 +19,12 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 @Controller
-@RequestMapping("/hr") // 路径保持不变，供人事经理使用
+@RequestMapping("/hr")
 public class HRController {
 
     private static final Logger logger = LoggerFactory.getLogger(HRController.class);
@@ -45,83 +43,76 @@ public class HRController {
         return "hr/dashboard";
     }
 
-    // 1. 档案列表 (人事经理视角：仅看本部门)
-    @GetMapping("/files")
+    @GetMapping("/dashboard/home")
+    public String dashboardHome() {
+        return "hr/dashboard_home";
+    }
+
+    @GetMapping("/personnel/list")
     public String personnelListPage(@RequestParam(value = "q", required = false) String q,
                                     HttpSession session, Model model) {
         User user = (User) session.getAttribute("user");
         Integer l3OrgId = user != null ? user.getL3OrgId() : null;
         logger.info("Fetching files for HR user. l3OrgId: {}", l3OrgId);
-        
+
         model.addAttribute("files", personnelService.listFiles(l3OrgId, q));
         model.addAttribute("q", q);
         return "hr/personnel_list";
     }
 
-    // 2. 新建档案页面 (人事经理视角)
-    @GetMapping("/files/new")
+    @GetMapping("/personnel/form")
     public String personnelNewPage(HttpSession session, Model model) {
         User user = (User) session.getAttribute("user");
-        // 预加载本部门的职位列表
         model.addAttribute("positions", positionMapper.selectList(new QueryWrapper<Position>().eq("L3_Org_ID", user.getL3OrgId())));
         return "hr/personnel_form";
     }
 
-    // 3. 处理新建档案提交 (人事经理视角)
-    @PostMapping("/files/new")
+    @PostMapping("/personnel/new")
     public String createPersonnel(@ModelAttribute PersonnelFile file,
                                   @RequestParam Integer positionId,
                                   HttpSession session, Model model) {
         User currentUser = (User) session.getAttribute("user");
-        // 强制设置新员工的机构为当前人事经理所在的机构
         file.setL3OrgId(currentUser.getL3OrgId());
-        file.setAuditStatus("Pending"); // 设置审核状态为待审核
-        file.setHrSubmitterId(currentUser.getUserId()); // 记录提交人ID
+        file.setAuditStatus("Pending");
+        file.setHrSubmitterId(currentUser.getUserId());
 
         try {
             personnelService.createPersonnelAuto(file, positionId);
         } catch (Exception ex) {
             model.addAttribute("error", "创建失败: " + ex.getMessage());
-            // 重新加载职位列表
             model.addAttribute("positions", positionMapper.selectList(new QueryWrapper<Position>().eq("L3_Org_ID", currentUser.getL3OrgId())));
             return "hr/personnel_form";
         }
-        return "redirect:/hr/files?success_create";
+        return "redirect:/hr/personnel/list?msg=success_create";
     }
 
-    // 4. 查看档案详情 (人事经理视角：带权限检查)
-    @GetMapping("/files/{id}")
+    @GetMapping("/personnel/view/{id}")
     public String personnelViewPage(@PathVariable Integer id, HttpSession session, Model model) {
         User user = (User) session.getAttribute("user");
         PersonnelFileDTO file = personnelService.getFileById(id);
         if (file == null) {
-            return "redirect:/hr/files?error_notfound";
+            return "redirect:/hr/personnel/list?error=notfound";
         }
-        // 权限检查
         if (!file.getL3OrgId().equals(user.getL3OrgId())) {
-            return "redirect:/hr/files?error_access_denied";
+            return "redirect:/hr/personnel/list?error=access_denied";
         }
         model.addAttribute("file", file);
         return "hr/personnel_view";
     }
 
-    // 5. 编辑档案页面 (人事经理视角)
-    @GetMapping("/files/edit/{id}")
+    @GetMapping("/personnel/edit/{id}")
     public String personnelEditPage(@PathVariable Integer id, HttpSession session, Model model) {
         User user = (User) session.getAttribute("user");
         PersonnelFileDTO fileData = personnelService.getFileById(id);
         if (fileData == null) {
-            return "redirect:/hr/files?error_notfound";
+            return "redirect:/hr/personnel/list?error=notfound";
         }
-        // 权限检查
         if (!fileData.getL3OrgId().equals(user.getL3OrgId())) {
-            return "redirect:/hr/files?error_access_denied";
+            return "redirect:/hr/personnel/list?error=access_denied";
         }
 
-        // 加载本部门职位
         model.addAttribute("positions", positionMapper.selectList(new QueryWrapper<Position>().eq("L3_Org_ID", user.getL3OrgId())));
 
-        // 获取员工当前职位ID
         if (fileData.getUserId() != null) {
             User empUser = userMapper.selectById(fileData.getUserId());
             model.addAttribute("currentPositionId", empUser.getPositionId());
@@ -131,20 +122,17 @@ public class HRController {
         return "hr/personnel_edit";
     }
 
-    // 6. 处理编辑档案提交 (人事经理视角)
-    @PostMapping("/files/edit/{id}")
+    @PostMapping("/personnel/edit/{id}")
     public String updatePersonnel(@PathVariable Integer id,
                                   @RequestParam Map<String, String> allParams,
                                   @RequestParam(required = false) Integer positionId,
                                   HttpSession session) {
         User user = (User) session.getAttribute("user");
         PersonnelFileDTO fileData = personnelService.getFileById(id);
-        // 再次权限检查
         if (!fileData.getL3OrgId().equals(user.getL3OrgId())) {
-            return "redirect:/hr/files?error_access_denied";
+            return "redirect:/hr/personnel/list?error=access_denied";
         }
 
-        // 更新档案基本信息
         Map<String, Object> payload = new HashMap<>();
         payload.put("name", allParams.get("name"));
         payload.put("gender", allParams.get("gender"));
@@ -153,7 +141,6 @@ public class HRController {
         payload.put("address", allParams.get("address"));
         personnelService.updatePersonnel(id, payload);
 
-        // 更新职位
         PersonnelFile pf = personnelFileMapper.selectById(id);
         if (pf != null && pf.getUserId() != null && positionId != null) {
             User empUser = userMapper.selectById(pf.getUserId());
@@ -162,15 +149,13 @@ public class HRController {
                 userMapper.updateById(empUser);
             }
         }
-        return "redirect:/hr/files/" + id;
+        return "redirect:/hr/personnel/view/" + id;
     }
 
-    // 7. 重新提交审核
-    @PostMapping("/files/resubmit")
+    @PostMapping("/personnel/resubmit")
     public String resubmitPersonnel(@RequestParam Integer id, HttpSession session) {
         User user = (User) session.getAttribute("user");
         
-        // 使用 DTO 获取正确的机构信息进行权限检查
         PersonnelFileDTO fileDTO = personnelService.getFileById(id);
         
         if (fileDTO != null && fileDTO.getL3OrgId().equals(user.getL3OrgId())) {
@@ -182,61 +167,13 @@ public class HRController {
                 personnelFileMapper.updateById(file);
             }
         } else {
-             return "redirect:/hr/files?error_access_denied";
+             return "redirect:/hr/personnel/list?error=access_denied";
         }
 
-        return "redirect:/hr/files";
+        return "redirect:/hr/personnel/list";
     }
 
-    // 8. 员工职位调整页面
-    @GetMapping("/positions/change")
-    public String showPositionChangePage(HttpSession session, Model model) {
-        User user = (User) session.getAttribute("user");
-
-        // 获取要排除的职位ID
-        List<String> excludedPositions = Arrays.asList("人事经理", "薪酬经理");
-        List<Integer> excludedPositionIds = positionMapper.selectList(
-                new QueryWrapper<Position>().in("Position_Name", excludedPositions)
-        ).stream().map(Position::getPositionId).collect(Collectors.toList());
-
-        // 查询用户，排除特定职位
-        QueryWrapper<User> userQuery = new QueryWrapper<User>()
-                .eq("L3_Org_ID", user.getL3OrgId());
-        if (!excludedPositionIds.isEmpty()) {
-            userQuery.notIn("Position_ID", excludedPositionIds);
-        }
-        List<User> users = userMapper.selectList(userQuery);
-
-        List<Integer> userIds = users.stream().map(User::getUserId).collect(Collectors.toList());
-        List<PersonnelFile> employees = personnelFileMapper.selectList(new QueryWrapper<PersonnelFile>().in("User_ID", userIds));
-        List<Position> positions = positionMapper.selectList(new QueryWrapper<Position>().eq("L3_Org_ID", user.getL3OrgId()));
-
-        model.addAttribute("employees", employees);
-        model.addAttribute("positions", positions);
-        return "hr/position_change";
-    }
-
-    // 9. 处理员工职位调整
-    @PostMapping("/positions/change")
-    public String changePosition(@RequestParam Integer userId, @RequestParam Integer positionId, HttpSession session, Model model) {
-        User user = (User) session.getAttribute("user");
-        User employee = userMapper.selectById(userId);
-
-        // 权限检查
-        if (employee == null || !employee.getL3OrgId().equals(user.getL3OrgId())) {
-            model.addAttribute("error", "无法操作非本机构的员工");
-            return "hr/position_change";
-        }
-
-        employee.setPositionId(positionId);
-        userMapper.updateById(employee);
-
-        model.addAttribute("success", "职位调整成功");
-        return "hr/position_change";
-    }
-
-    // 10. 考勤管理页面 (新增)
-    @GetMapping("/attendance")
+    @GetMapping("/attendance/management")
     public String attendanceManagement(HttpSession session, Model model) {
         User hrUser = (User) session.getAttribute("user");
         if (hrUser == null || hrUser.getL3OrgId() == null) {
