@@ -1,7 +1,20 @@
 <div class="container-fluid">
     <div class="d-flex justify-content-between mb-3 align-items-center">
         <h3>薪资发放历史</h3>
-        <button onclick="loadContent('/salary/register/list')" class="btn btn-outline-secondary btn-sm">刷新</button>
+
+        <!-- 搜索表单 + 刷新按钮 -->
+        <div class="d-flex align-items-center gap-2">
+            <form class="d-flex" action="/salary/register/list" method="get">
+                <input type="search"
+                       name="registerCode"
+                       class="form-control form-control-sm me-2"
+                       placeholder="根据单号模糊搜索 (例如: PAY20251211)"
+                       th:value="${registerCode}">
+                <button type="submit" class="btn btn-primary btn-sm">搜索</button>
+            </form>
+
+            <button onclick="loadContent('/salary/register/list')" class="btn btn-outline-secondary btn-sm">刷新</button>
+        </div>
     </div>
 
     <!-- 这两行你原来就有，保留不影响 Modal（只是会多显示一条 alert） -->
