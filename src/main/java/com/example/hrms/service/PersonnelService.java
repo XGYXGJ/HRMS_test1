@@ -2,6 +2,7 @@
 package com.example.hrms.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.example.hrms.dto.PersonnelFileDTO;
 import com.example.hrms.entity.PersonnelFile;
 import com.example.hrms.entity.User;
 import com.example.hrms.mapper.PersonnelFileMapper;
@@ -11,6 +12,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -26,22 +28,29 @@ public class PersonnelService {
 
     private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("yyyyMMdd");
 
-    // 列表与搜索 (保持不变)
-    public List<Map<String, Object>> listFiles(Integer l3OrgId, String q) {
+    public List<PersonnelFileDTO> listFiles(Integer l3OrgId, String q) {
         return fileMapper.selectFilesWithOrgName(l3OrgId, q);
     }
 
-    private String safe(Map<String, Object> m, String... keys) {
-        for (String k : keys) {
-            if (k == null) continue;
-            Object v = m.get(k);
-            if (v != null) return String.valueOf(v);
-            v = m.get(k.toUpperCase());
-            if (v != null) return String.valueOf(v);
-            v = m.get(k.toLowerCase());
-            if (v != null) return String.valueOf(v);
+    public List<PersonnelFileDTO> listDeletedFiles() {
+        return fileMapper.selectDeletedFilesWithOrgName();
+    }
+
+    @Transactional
+    public boolean restoreFile(Integer fileId) {
+        PersonnelFile pf = fileMapper.selectById(fileId);
+        if (pf == null) return false;
+        pf.setIsDeleted(0);
+        fileMapper.updateById(pf);
+
+        if(pf.getUserId() != null){
+            User user = userMapper.selectById(pf.getUserId());
+            if(user != null){
+                user.setIsDeleted(false);
+                userMapper.updateById(user);
+            }
         }
-        return "";
+        return true;
     }
 
     // [FIX] 核心创建方法，保持不变
@@ -71,6 +80,7 @@ public class PersonnelService {
         file.setUserId(uid);
         file.setArchiveNo(account);
         file.setIsDeleted(0);
+        file.setCreationTime(LocalDateTime.now());
         fileMapper.insert(file);
 
         Map<String, Object> res = new HashMap<>();
@@ -108,6 +118,7 @@ public class PersonnelService {
         file.setUserId(user.getUserId());
         file.setArchiveNo(username);
         file.setIsDeleted(0);
+        file.setCreationTime(LocalDateTime.now());
         fileMapper.insert(file);
 
         Map<String, Object> res = new HashMap<>();
@@ -136,22 +147,9 @@ public class PersonnelService {
     }
 
     // 获取单个档案
-    public Map<String, Object> getFileById(Integer id) {
-        PersonnelFile pf = fileMapper.selectById(id);
-        if (pf == null) return null;
-        Map<String, Object> m = new HashMap<>();
-        m.put("fileId", pf.getFileId());
-        m.put("archiveNo", pf.getArchiveNo());
-        m.put("userId", pf.getUserId());
-        m.put("name", pf.getName());
-        m.put("gender", pf.getGender());
-        m.put("idNumber", pf.getIdNumber());
-        m.put("phoneNumber", pf.getPhoneNumber());
-        m.put("address", pf.getAddress());
-        m.put("L3_Org_ID", pf.getL3OrgId());
-        m.put("auditStatus", pf.getAuditStatus());
-        m.put("creationTime", pf.getCreationTime());
-        return m;
+    public PersonnelFileDTO getFileById(Integer id) {
+        List<PersonnelFileDTO> files = fileMapper.selectFilesWithOrgName(null, null);
+        return files.stream().filter(f -> f.getFileId().equals(id)).findFirst().orElse(null);
     }
 
     // 更新档案

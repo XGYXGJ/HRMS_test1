@@ -1,6 +1,7 @@
 package com.example.hrms.controller;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.example.hrms.dto.PersonnelFileDTO;
 import com.example.hrms.dto.UserDTO;
 import com.example.hrms.entity.PersonnelFile;
 import com.example.hrms.entity.Position;
@@ -17,6 +18,7 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -91,13 +93,12 @@ public class HRController {
     @GetMapping("/files/{id}")
     public String personnelViewPage(@PathVariable Integer id, HttpSession session, Model model) {
         User user = (User) session.getAttribute("user");
-        Map<String, Object> file = personnelService.getFileById(id);
+        PersonnelFileDTO file = personnelService.getFileById(id);
         if (file == null) {
             return "redirect:/hr/files?error_notfound";
         }
         // 权限检查
-        Integer fileL3 = file.get("L3_Org_ID") != null ? ((Number) file.get("L3_Org_ID")).intValue() : null;
-        if (fileL3 == null || !fileL3.equals(user.getL3OrgId())) {
+        if (!file.getL3OrgId().equals(user.getL3OrgId())) {
             return "redirect:/hr/files?error_access_denied";
         }
         model.addAttribute("file", file);
@@ -108,13 +109,12 @@ public class HRController {
     @GetMapping("/files/edit/{id}")
     public String personnelEditPage(@PathVariable Integer id, HttpSession session, Model model) {
         User user = (User) session.getAttribute("user");
-        Map<String, Object> fileData = personnelService.getFileById(id);
+        PersonnelFileDTO fileData = personnelService.getFileById(id);
         if (fileData == null) {
             return "redirect:/hr/files?error_notfound";
         }
         // 权限检查
-        Integer fileL3 = fileData.get("L3_Org_ID") != null ? ((Number) fileData.get("L3_Org_ID")).intValue() : null;
-        if (fileL3 == null || !fileL3.equals(user.getL3OrgId())) {
+        if (!fileData.getL3OrgId().equals(user.getL3OrgId())) {
             return "redirect:/hr/files?error_access_denied";
         }
 
@@ -122,9 +122,8 @@ public class HRController {
         model.addAttribute("positions", positionMapper.selectList(new QueryWrapper<Position>().eq("L3_Org_ID", user.getL3OrgId())));
 
         // 获取员工当前职位ID
-        PersonnelFile file = personnelFileMapper.selectById(id);
-        if (file != null && file.getUserId() != null) {
-            User empUser = userMapper.selectById(file.getUserId());
+        if (fileData.getUserId() != null) {
+            User empUser = userMapper.selectById(fileData.getUserId());
             model.addAttribute("currentPositionId", empUser.getPositionId());
         }
 
@@ -139,10 +138,9 @@ public class HRController {
                                   @RequestParam(required = false) Integer positionId,
                                   HttpSession session) {
         User user = (User) session.getAttribute("user");
-        Map<String, Object> fileData = personnelService.getFileById(id);
+        PersonnelFileDTO fileData = personnelService.getFileById(id);
         // 再次权限检查
-        Integer fileL3 = fileData.get("L3_Org_ID") != null ? ((Number) fileData.get("L3_Org_ID")).intValue() : null;
-        if (fileL3 == null || !fileL3.equals(user.getL3OrgId())) {
+        if (!fileData.getL3OrgId().equals(user.getL3OrgId())) {
             return "redirect:/hr/files?error_access_denied";
         }
 
@@ -171,12 +169,20 @@ public class HRController {
     @PostMapping("/files/resubmit")
     public String resubmitPersonnel(@RequestParam Integer id, HttpSession session) {
         User user = (User) session.getAttribute("user");
-        PersonnelFile file = personnelFileMapper.selectById(id);
-
-        // 权限检查：确保该档案属于当前人事经理的机构
-        if (file != null && file.getL3OrgId().equals(user.getL3OrgId())) {
-            file.setAuditStatus("Pending");
-            personnelFileMapper.updateById(file);
+        
+        // 使用 DTO 获取正确的机构信息进行权限检查
+        PersonnelFileDTO fileDTO = personnelService.getFileById(id);
+        
+        if (fileDTO != null && fileDTO.getL3OrgId().equals(user.getL3OrgId())) {
+            PersonnelFile file = personnelFileMapper.selectById(id);
+            if (file != null) {
+                file.setAuditStatus("Pending");
+                file.setHrSubmitterId(user.getUserId());
+                file.setCreationTime(LocalDateTime.now());
+                personnelFileMapper.updateById(file);
+            }
+        } else {
+             return "redirect:/hr/files?error_access_denied";
         }
 
         return "redirect:/hr/files";

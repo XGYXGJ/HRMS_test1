@@ -28,8 +28,8 @@
             <tr th:each="file : ${files}">
                 <td th:text="${file.archiveNo}"></td>
                 <td th:text="${file.name}"></td>
-                <td th:text="${submitterMap.get(file.hrSubmitterId)?.username}"></td>
-                <td th:text="${orgNameMap.get(file.l3OrgId)}"></td>
+                <td th:text="${file.submitterName}"></td>
+                <td th:text="${file.formattedOrgName}"></td>
                 <td th:text="${#temporals.format(file.creationTime, 'yyyy-MM-dd HH:mm')}"></td>
                 <td>
                     <span th:switch="${file.auditStatus}">

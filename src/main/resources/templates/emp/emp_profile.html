@@ -1,9 +1,12 @@
 <!-- src/main/resources/templates/emp/emp_profile.html -->
 <div class="animate-fade-in">
-    <!-- 个人资料卡片（从 home.html 拆出） -->
+    <!-- 个人资料卡片 -->
     <div class="card mb-4">
-        <div class="card-header">
+        <div class="card-header d-flex justify-content-between align-items-center">
             <h4>我的档案</h4>
+            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#changePasswordModal">
+                修改密码
+            </button>
         </div>
         <div class="card-body">
             <div th:if="${profile}">
@@ -21,3 +24,77 @@
         </div>
     </div>
 </div>
+
+<!-- 修改密码模态框 -->
+<div class="modal fade" id="changePasswordModal" tabindex="-1" aria-labelledby="changePasswordModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="changePasswordModalLabel">修改密码</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="changePasswordForm" action="/emp/change-password" method="post">
+                    <div class="mb-3">
+                        <label for="currentPassword" class="form-label">当前密码</label>
+                        <input type="password" class="form-control" id="currentPassword" name="currentPassword" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="newPassword" class="form-label">新密码</label>
+                        <input type="password" class="form-control" id="newPassword" name="newPassword" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="confirmPassword" class="form-label">确认新密码</label>
+                        <input type="password" class="form-control" id="confirmPassword" name="confirmPassword" required>
+                    </div>
+                    <div id="password-error" class="alert alert-danger" style="display: none;"></div>
+                    <button type="submit" class="btn btn-primary">确认修改</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// 确保在模态框内的表单提交也使用 AJAX
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('changePasswordForm');
+    if (form) {
+        form.addEventListener('submit', function(event) {
+            event.preventDefault();
+
+            const newPassword = document.getElementById('newPassword').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+            const errorDiv = document.getElementById('password-error');
+
+            if (newPassword !== confirmPassword) {
+                errorDiv.textContent = '两次输入的新密码不一致！';
+                errorDiv.style.display = 'block';
+                return;
+            }
+            errorDiv.style.display = 'none';
+
+            const formData = new FormData(form);
+            fetch('/emp/change-password', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('密码修改成功！');
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('changePasswordModal'));
+                    modal.hide();
+                } else {
+                    errorDiv.textContent = data.message || '密码修改失败，请重试。';
+                    errorDiv.style.display = 'block';
+                }
+            })
+            .catch(err => {
+                errorDiv.textContent = '请求失败，请检查网络连接。';
+                errorDiv.style.display = 'block';
+            });
+        });
+    }
+});
+</script>

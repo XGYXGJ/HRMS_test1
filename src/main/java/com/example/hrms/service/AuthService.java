@@ -14,6 +14,7 @@ public class AuthService {
         // 简单实现，实际生产环境需要加盐Hash验证
         return userMapper.selectOne(new QueryWrapper<User>()
                 .eq("Username", username)
-                .eq("Password_Hash", password));
+                .eq("Password_Hash", password)
+                .eq("Is_Deleted", 0)); // 增加条件：只查询未被删除的用户
     }
 }

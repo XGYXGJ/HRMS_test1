@@ -47,8 +47,10 @@ public class AdminPositionController {
      */
     @GetMapping
     public String listAllPositions(Model model) {
-        // 1. 查询所有职位
-        List<Position> positions = positionMapper.selectList(null);
+        // 1. 查询所有职位，排除“管理员”
+        List<Position> positions = positionMapper.selectList(
+            new QueryWrapper<Position>().ne("Position_Name", "管理员")
+        );
 
         // 2. 批量获取机构名称
         Map<Integer, String> orgNameMap = positions.stream()

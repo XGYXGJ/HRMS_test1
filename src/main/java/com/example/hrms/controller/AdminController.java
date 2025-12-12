@@ -53,7 +53,14 @@ public class AdminController {
         return "admin/dashboard";
     }
 
-    // 2. 机构添加页面
+    // 2. 机构列表页面
+    @GetMapping("/orgs")
+    public String listOrgs(Model model) {
+        model.addAttribute("orgs", organizationMapper.selectOrgList());
+        return "admin/org_list";
+    }
+
+    // 3. 机构添加页面
     @GetMapping("/org/add")
     public String addOrgPage(Model model) {
         // 加载一级机构供选择
@@ -62,18 +69,11 @@ public class AdminController {
         return "admin/org_add";
     }
 
-    // 3. 处理机构添加请求
+    // 4. 处理机构添加请求
     @PostMapping("/org/save")
     public String saveOrg(Organization org) {
         orgService.addOrg(org);
-        return "redirect:/admin/org/add?success";
-    }
-
-    // 4. 档案列表查询页面 (实现模糊查询)
-    @GetMapping("/files")
-    public String listFiles(@RequestParam(value = "q", required = false) String q, Model model) {
-        model.addAttribute("files", fileMapper.selectFilesWithOrgName(null, q));
-        return "admin/file_list";
+        return "redirect:/admin/orgs?success";
     }
 
     // 5. 新建账号页面

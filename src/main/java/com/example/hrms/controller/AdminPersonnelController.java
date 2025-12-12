@@ -37,16 +37,31 @@ public class AdminPersonnelController {
     @Autowired
     private OrganizationService organizationService;
 
-    // 1. 档案列表 (管理员视角：查看全部)
+    // 1. 档案列表 (管理员视角：查看全部，支持模糊查找和按机构筛选)
     @GetMapping
-    public String listAllFiles(@RequestParam(value = "q", required = false) String q, Model model) {
-        // 管理员的 l3OrgId 为 null，可以查询全部
-        model.addAttribute("files", personnelService.listFiles(null, q));
+    public String listAllFiles(@RequestParam(value = "q", required = false) String q,
+                               @RequestParam(value = "orgId", required = false) Integer orgId,
+                               Model model) {
+        model.addAttribute("files", personnelService.listFiles(orgId, q));
         model.addAttribute("q", q);
-        return "admin/personnel_list"; // 指向新的 admin 视图
+        return "admin/file_list"; // 使用 admin/file_list.html
     }
 
-    // 2. 新建档案页面 (管理员视角：分级选择机构)
+    // 2. 已删除档案列表
+    @GetMapping("/deleted")
+    public String listDeletedFiles(Model model) {
+        model.addAttribute("files", personnelService.listDeletedFiles());
+        return "admin/deleted_list";
+    }
+
+    // 3. 恢复已删除的档案
+    @GetMapping("/restore/{id}")
+    public String restoreFile(@PathVariable Integer id) {
+        personnelService.restoreFile(id);
+        return "redirect:/admin/personnel/deleted";
+    }
+
+    // 4. 新建档案页面 (管理员视角：分级选择机构)
     @GetMapping("/new")
     public String newFilePage(Model model) {
         // 提供一级机构列表用于联动选择
@@ -54,7 +69,7 @@ public class AdminPersonnelController {
         return "admin/personnel_form"; // 指向新的 admin 视图
     }
 
-    // 3. 处理新建档案提交 (管理员视角)
+    // 5. 处理新建档案提交 (管理员视角)
     @PostMapping("/create")
     public String createFile(@ModelAttribute PersonnelFile file,
                              @RequestParam Integer positionId,
@@ -69,7 +84,7 @@ public class AdminPersonnelController {
         return "redirect:/admin/personnel?success_create";
     }
 
-    // 4. 查看档案详情 (管理员无限制)
+    // 6. 查看档案详情 (管理员无限制)
     @GetMapping("/{id}")
     public String viewFile(@PathVariable Integer id, Model model) {
         PersonnelFile file = personnelFileMapper.selectById(id);
@@ -90,54 +105,26 @@ public class AdminPersonnelController {
         return "admin/personnel_view";
     }
 
-    // 5. 编辑档案页面 (管理员视角)
+    // 7. 编辑档案页面 (管理员视角)
     @GetMapping("/edit/{id}")
     public String editFilePage(@PathVariable Integer id, Model model) {
-        Map<String, Object> fileData = personnelService.getFileById(id);
-        if (fileData == null) {
-            return "redirect:/admin/personnel?error_notfound";
-        }
-
-        Integer l3OrgId = fileData.get("L3_Org_ID") != null ? ((Number) fileData.get("L3_Org_ID")).intValue() : null;
-        if (l3OrgId != null) {
-            model.addAttribute("positions", positionMapper.selectList(new QueryWrapper<Position>().eq("L3_Org_ID", l3OrgId)));
-        }
-
         PersonnelFile file = personnelFileMapper.selectById(id);
-        if (file != null && file.getUserId() != null) {
-            User user = userMapper.selectById(file.getUserId());
-            if (user != null) {
-                model.addAttribute("currentPositionId", user.getPositionId());
-            }
-        }
-
-        model.addAttribute("file", fileData);
-        return "admin/personnel_edit";
+        model.addAttribute("file", file);
+        return "admin/file_edit"; // 使用 admin/file_edit.html
     }
 
-    // 6. 处理编辑档案提交 (管理员视角)
-    @PostMapping("/update/{id}")
-    public String updateFile(@PathVariable Integer id,
-                             @RequestParam Map<String, String> allParams,
-                             @RequestParam(required = false) Integer positionId) {
-        // 更新档案基本信息
-        Map<String, Object> payload = new java.util.HashMap<>();
-        payload.put("name", allParams.get("name"));
-        payload.put("gender", allParams.get("gender"));
-        payload.put("idNumber", allParams.get("idNumber"));
-        payload.put("phoneNumber", allParams.get("phoneNumber"));
-        payload.put("address", allParams.get("address"));
-        personnelService.updatePersonnel(id, payload);
-
-        // 更新职位
-        PersonnelFile pf = personnelFileMapper.selectById(id);
-        if (pf != null && pf.getUserId() != null && positionId != null) {
-            User user = userMapper.selectById(pf.getUserId());
-            if (user != null) {
-                user.setPositionId(positionId);
-                userMapper.updateById(user);
-            }
-        }
-        return "redirect:/admin/personnel/" + id;
+    // 8. 处理编辑档案提交 (管理员视角)
+    @PostMapping("/edit/{id}")
+    public String updateFile(@PathVariable Integer id, @ModelAttribute PersonnelFile file) {
+        file.setFileId(id);
+        personnelFileMapper.updateById(file);
+        return "redirect:/admin/personnel";
+    }
+    
+    // 9. 删除档案
+    @GetMapping("/delete/{id}")
+    public String deleteFile(@PathVariable Integer id) {
+        personnelService.deleteFile(id, "Deleted by admin");
+        return "redirect:/admin/personnel";
     }
 }

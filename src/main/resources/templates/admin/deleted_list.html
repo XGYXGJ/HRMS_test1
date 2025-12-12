@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>已删除档案</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+<div class="container mt-4">
+    <h3>已删除档案</h3>
+    <a href="/admin/personnel" class="btn btn-secondary mb-3">返回档案列表</a>
+
+    <table class="table table-bordered table-striped">
+        <thead class="table-dark">
+        <tr>
+            <th>档案号</th>
+            <th>姓名</th>
+            <th>机构</th>
+            <th>岗位</th>
+            <th>操作</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="file : ${files}">
+            <td th:text="${file.archiveNo}"></td>
+            <td th:text="${file.name}"></td>
+            <td th:text="${file.formattedOrgName}"></td>
+            <td th:text="${file.positionName}"></td>
+            <td>
+                <a th:href="@{/admin/personnel/restore/{id}(id=${file.fileId})}" class="btn btn-success btn-sm" onclick="return confirm('确定要恢复吗？');">恢复</a>
+            </td>
+        </tr>
+        </tbody>
+    </table>
+</div>
+</body>
+</html>

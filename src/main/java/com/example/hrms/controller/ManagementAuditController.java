@@ -1,6 +1,7 @@
 package com.example.hrms.controller;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.example.hrms.dto.PersonnelFileDTO;
 import com.example.hrms.entity.Organization;
 import com.example.hrms.entity.PersonnelFile;
 import com.example.hrms.entity.Position;
@@ -69,47 +70,8 @@ public class ManagementAuditController {
 
     @GetMapping("/personnel/history")
     public String showPersonnelAuditHistory(@RequestParam(value = "q", required = false) String q, Model model) {
-        QueryWrapper<PersonnelFile> queryWrapper = new QueryWrapper<>();
-        queryWrapper.in("Audit_Status", "Approved", "Rejected");
-
-        if (StringUtils.hasText(q)) {
-            List<Integer> orgIds = organizationMapper.selectList(new QueryWrapper<Organization>().like("Org_Name", q))
-                    .stream().map(Organization::getOrgId).collect(Collectors.toList());
-            List<Integer> userIds = userMapper.selectList(new QueryWrapper<User>().like("username", q))
-                    .stream().map(User::getUserId).collect(Collectors.toList());
-
-            queryWrapper.and(wrapper -> {
-                wrapper.like("Name", q)
-                        .or().like("Archive_No", q);
-                if (!orgIds.isEmpty()) {
-                    wrapper.or().in("L3_Org_ID", orgIds);
-                }
-                if (!userIds.isEmpty()) {
-                    wrapper.or().in("HR_Submitter_ID", userIds);
-                }
-            });
-        }
-
-        List<PersonnelFile> files = personnelFileMapper.selectList(queryWrapper);
-        List<Integer> submitterIds = files.stream()
-                .map(PersonnelFile::getHrSubmitterId)
-                .filter(Objects::nonNull)
-                .distinct()
-                .collect(Collectors.toList());
-        Map<Integer, User> submitterMap = Collections.emptyMap();
-        if (!submitterIds.isEmpty()) {
-            submitterMap = userMapper.selectBatchIds(submitterIds).stream()
-                    .collect(Collectors.toMap(User::getUserId, user -> user));
-        }
-
-        Map<Integer, String> orgNameMap = files.stream()
-                .map(PersonnelFile::getL3OrgId)
-                .distinct()
-                .collect(Collectors.toMap(id -> id, id -> organizationService.getFullOrgName(id)));
-
+        List<PersonnelFileDTO> files = personnelFileMapper.selectAuditHistory(q);
         model.addAttribute("files", files);
-        model.addAttribute("submitterMap", submitterMap);
-        model.addAttribute("orgNameMap", orgNameMap);
         model.addAttribute("q", q);
         return "manage/audit_history_personnel";
     }

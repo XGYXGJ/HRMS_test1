@@ -14,16 +14,14 @@ import com.example.hrms.mapper.PersonnelFileMapper;
 import com.example.hrms.mapper.PositionMapper;
 import com.example.hrms.mapper.SalaryRegisterDetailMapper;
 import com.example.hrms.mapper.SalaryRegisterMasterMapper;
+import com.example.hrms.mapper.UserMapper;
 import jakarta.servlet.http.HttpSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.math.BigDecimal;
@@ -48,6 +46,7 @@ public class EmployeeController {
     @Autowired private SalaryRegisterDetailMapper salaryRegisterDetailMapper;
     @Autowired private SalaryRegisterMasterMapper salaryRegisterMasterMapper;
     @Autowired private SalaryItemMapper salaryItemMapper;
+    @Autowired private UserMapper userMapper;
 
     @GetMapping("/dashboard")
     public String dashboard(HttpSession session) {
@@ -56,6 +55,36 @@ public class EmployeeController {
             return "redirect:/login";
         }
         return "emp/emp_dashboard";
+    }
+
+    @PostMapping("/change-password")
+    @ResponseBody
+    public Map<String, Object> changePassword(HttpSession session,
+                                              @RequestParam String currentPassword,
+                                              @RequestParam String newPassword) {
+        Map<String, Object> response = new HashMap<>();
+        User user = (User) session.getAttribute("user");
+        if (user == null) {
+            response.put("success", false);
+            response.put("message", "用户未登录");
+            return response;
+        }
+
+        User dbUser = userMapper.selectById(user.getUserId());
+        if (!dbUser.getPasswordHash().equals(currentPassword)) {
+            response.put("success", false);
+            response.put("message", "当前密码不正确");
+            return response;
+        }
+
+        dbUser.setPasswordHash(newPassword);
+        userMapper.updateById(dbUser);
+        
+        // 更新 session 中的用户信息
+        session.setAttribute("user", dbUser);
+
+        response.put("success", true);
+        return response;
     }
 
     @PostMapping("/punch-in")
@@ -291,4 +320,3 @@ public class EmployeeController {
         return "emp/emp_salary";
     }
 }
-
