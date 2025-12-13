@@ -196,11 +196,32 @@ body {
     align-items: center;
 }
 
+/* Ensure all text inside the default card-header is white */
+.card-header,
+.card-header .h5,
+.card-header h5,
+.card-header .text-primary,
+.card-header .text-muted {
+    color: white !important;
+}
+
+
 .card-header.bg-white {
     background: white !important;
     color: var(--dark-color) !important;
     border-bottom: 1px solid rgba(0, 0, 0, 0.05);
 }
+
+/* Override for white background headers */
+.card-header.bg-white .h5,
+.card-header.bg-white h5,
+.card-header.bg-white .text-primary {
+    color: var(--primary-color) !important;
+}
+.card-header.bg-white .text-muted {
+    color: #64748b !important;
+}
+
 
 .card-body {
     padding: 1.75rem;
