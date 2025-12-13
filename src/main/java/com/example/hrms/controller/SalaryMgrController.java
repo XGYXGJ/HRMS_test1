@@ -40,7 +40,64 @@ public class SalaryMgrController {
     }
 
     @GetMapping("/dashboard/home")
-    public String dashboardHome() {
+    public String dashboardHome(Model model, HttpSession session) {
+        // --- 1. 获取当前用户及机构 ID ---
+        User user = (User) session.getAttribute("user");
+        if (user == null) {
+            // 应该处理用户未登录或会话过期的情况，这里做个简单重定向或报错
+            model.addAttribute("error", "会话信息缺失，无法加载工作台数据。");
+            return "redirect:/login"; // 假设存在一个登录页面
+        }
+        Integer l3OrgId = user.getL3OrgId(); // 获取用户的 L3 机构 ID
+
+        // ======================================
+        // 2. 薪酬标准统计 (已修正为按 L3_Org_ID 过滤)
+        // ======================================
+        // 总薪酬标准数 (本机构)
+        Long totalStandardCount = standardMasterMapper.selectCount(
+                new QueryWrapper<SalaryStandardMaster>().eq("L3_Org_ID", l3OrgId)
+        );
+
+        // 待审核薪酬标准数 (本机构)
+        Long pendingStandardCount = standardMasterMapper.selectCount(
+                new QueryWrapper<SalaryStandardMaster>()
+                        .eq("L3_Org_ID", l3OrgId)
+                        .eq("Audit_Status", "Pending") // 修正列名 Audit_Status
+        );
+
+        // ======================================
+        // 3. 工资单统计 (已修正为按 L3_Org_ID 过滤)
+        // ======================================
+        // 总工资单数 (本机构)
+        Long totalRegisterCount = registerMasterMapper.selectCount(
+                new QueryWrapper<SalaryRegisterMaster>().eq("L3_Org_ID", l3OrgId)
+        );
+
+        // 待处理工资单数 (本机构: 草稿/驳回)
+        Long draftRegisterCount = registerMasterMapper.selectCount(
+                new QueryWrapper<SalaryRegisterMaster>()
+                        .eq("L3_Org_ID", l3OrgId)
+                        .in("Audit_Status", "Draft", "Rejected") // 修正列名 Audit_Status
+        );
+
+        // ======================================
+        // 4. 员工总数统计 (已修正为按 L3_Org_ID 过滤)
+        // ======================================
+        // 员工总数 (本机构)
+        Long employeeCount = personnelFileMapper.selectCount(
+                new QueryWrapper<PersonnelFile>().eq("L3_Org_ID", l3OrgId) // 假设员工表 T_Personnel_File 有 L3_Org_ID 字段
+        );
+
+
+        // ======================================
+        // 5. 将数据传递给前端
+        // ======================================
+        model.addAttribute("totalStandardCount", totalStandardCount);
+        model.addAttribute("pendingStandardCount", pendingStandardCount);
+        model.addAttribute("totalRegisterCount", totalRegisterCount);
+        model.addAttribute("draftRegisterCount", draftRegisterCount);
+        model.addAttribute("employeeCount", employeeCount);
+
         return "salary/dashboard_home";
     }
 
@@ -476,6 +533,64 @@ public class SalaryMgrController {
         model.addAttribute("finalDetails", finalDetails);
 
         return "salary/register_detail";
+    }
+
+    // =========================================
+// 草稿状态工资单删除方法
+// =========================================
+    @PostMapping("/register/delete/{registerId}")
+    public String deleteRegister(@PathVariable Integer registerId,
+                                 RedirectAttributes redirectAttributes,
+                                 HttpSession session) {
+        User user = (User) session.getAttribute("user");
+        if (user == null) {
+            redirectAttributes.addFlashAttribute("error", "用户会话已过期，请重新登录。");
+            // 如果用户会话过期，应重定向到登录页
+            return "redirect:/login";
+        }
+
+        String registerCode = null;
+        try {
+            SalaryRegisterMaster master = registerMasterMapper.selectById(registerId);
+            if (master == null) {
+                redirectAttributes.addFlashAttribute("error", "未找到该工资单记录。");
+                return "redirect:/salary/register/list";
+            }
+
+            // 1. 在删除前安全地获取单号
+            registerCode = master.getRegisterCode();
+
+            // 权限和状态检查
+            if (!master.getL3OrgId().equals(user.getL3OrgId())) {
+                redirectAttributes.addFlashAttribute("error", "权限不足，无法删除非本机构的工资单。");
+                return "redirect:/salary/register/list";
+            }
+
+            // 必须是 Draft 状态才能删除
+            if (!"Draft".equals(master.getAuditStatus())) {
+                redirectAttributes.addFlashAttribute("error", "只有处于 [草稿] 状态的工资单才能被删除。当前状态：" + master.getAuditStatus());
+                return "redirect:/salary/register/list";
+            }
+
+            // --- 执行删除操作 ---
+            // 1. 删除明细记录
+            registerDetailMapper.delete(new QueryWrapper<SalaryRegisterDetail>().eq("Register_ID", registerId));
+
+            // 2. 删除主记录
+            registerMasterMapper.deleteById(registerId);
+
+            // 3. 传入成功的消息，使用之前保存的单号
+            String finalMsg = "工资单草稿删除成功！单号: " + (registerCode != null ? registerCode : "未知");
+            redirectAttributes.addFlashAttribute("msg", finalMsg);
+
+        } catch (Exception e) {
+            System.err.println("删除工资单失败: " + e.getMessage());
+            redirectAttributes.addFlashAttribute("error", "删除失败，系统异常：" + e.getMessage());
+        }
+
+
+        // 保持重定向到列表页，确保用户能看到更新后的列表
+        return "redirect:/salary/register/list";
     }
 
     // =========================================

@@ -1,37 +1,255 @@
-<div class="animate-fade-in">
-    <h3>工作台概览</h3>
-
-    <div th:if="${msg}" class="alert alert-success alert-dismissible fade show" role="alert">
-        <span th:text="${msg}"></span>
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+<div class="animate-fade-in container-fluid px-0">
+    <!-- 顶部标题区域优化 -->
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-4">
+        <div class="mb-3 mb-md-0">
+            <h3 class="mb-2 fw-bold text-primary">薪酬经理工作台</h3>
+            <p class="text-muted mb-0">
+                <i class="bi bi-stars me-1"></i>欢迎回来！请选择下方的业务模块开始您的工作。
+            </p>
+        </div>
+        <div>
+            <span class="badge bg-gradient-primary border-0 p-3 shadow-sm">
+                <i class="bi bi-calendar-event me-2"></i>
+                <span class="fw-medium">当前系统日期:</span>
+                <span class="fw-bold ms-1" th:text="${#temporals.format(#temporals.createNow(), 'yyyy年MM月dd日')}"></span>
+            </span>
+        </div>
     </div>
-    <div th:if="${error}" class="alert alert-danger alert-dismissible fade show" role="alert">
-        <span th:text="${error}"></span>
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+
+    <!-- 消息提示框优化 -->
+    <div th:if="${msg}" class="alert alert-success alert-dismissible fade show shadow-lg border-0" role="alert">
+        <div class="d-flex align-items-center">
+            <div class="bg-white rounded-circle p-2 me-3">
+                <i class="bi bi-check-circle-fill text-success fs-5"></i>
+            </div>
+            <div class="flex-grow-1">
+                <span class="fw-medium" th:text="${msg}"></span>
+            </div>
+        </div>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="alert"></button>
     </div>
 
-    <div class="row mt-4">
+    <div th:if="${error}" class="alert alert-danger alert-dismissible fade show shadow-lg border-0" role="alert">
+        <div class="d-flex align-items-center">
+            <div class="bg-white rounded-circle p-2 me-3">
+                <i class="bi bi-exclamation-triangle-fill text-danger fs-5"></i>
+            </div>
+            <div class="flex-grow-1">
+                <span class="fw-medium" th:text="${error}"></span>
+            </div>
+        </div>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="alert"></button>
+    </div>
+
+    <!-- 数据卡片区域 - 添加了更现代的渐变效果 -->
+    <div class="row g-4 mb-5">
+        <div class="col-xl-3 col-md-6">
+            <div class="card dashboard-card bg-gradient-primary border-0 text-white overflow-hidden">
+                <div class="card-body position-relative">
+                    <div class="position-absolute top-0 end-0 opacity-10" style="transform: translate(30%, -30%);">
+                        <i class="bi bi-card-list display-4"></i>
+                    </div>
+                    <div class="position-relative">
+                        <div class="small fw-light text-white-75 mb-1">薪酬标准总数</div>
+                        <div class="display-5 fw-bold mb-2" th:text="${totalStandardCount ?: 0}">26</div>
+                        <div class="small text-white-75">
+                            <i class="bi bi-list-check me-1"></i>已生效的薪酬方案
+                        </div>
+                    </div>
+                </div>
+                <div class="card-footer bg-transparent border-top border-white border-opacity-20 py-3">
+                    <a class="text-white stretched-link text-decoration-none d-flex align-items-center justify-content-between fw-medium"
+                       onclick="loadContent('/salary/standard/list')">
+                        <span>管理所有标准</span>
+                        <i class="bi bi-arrow-right-circle fs-5"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6">
+            <div class="card dashboard-card bg-gradient-warning border-0 text-dark overflow-hidden">
+                <div class="card-body position-relative">
+                    <div class="position-absolute top-0 end-0 opacity-10" style="transform: translate(30%, -30%);">
+                        <i class="bi bi-envelope-open display-4"></i>
+                    </div>
+                    <div class="position-relative">
+                        <div class="small fw-light text-dark-75 mb-1">待处理的工资单</div>
+                        <div class="display-5 fw-bold mb-2" th:text="${draftRegisterCount ?: 0}">3</div>
+                        <div class="small text-dark-75">
+                            <i class="bi bi-clock-history me-1"></i>草稿或驳回状态
+                        </div>
+                    </div>
+                </div>
+                <div class="card-footer bg-transparent border-top border-dark border-opacity-20 py-3">
+                    <a class="text-dark stretched-link text-decoration-none d-flex align-items-center justify-content-between fw-medium"
+                       onclick="loadContent('/salary/register/list')">
+                        <span>立即处理</span>
+                        <i class="bi bi-arrow-right-circle fs-5"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6">
+            <div class="card dashboard-card bg-gradient-danger border-0 text-white overflow-hidden">
+                <div class="card-body position-relative">
+                    <div class="position-absolute top-0 end-0 opacity-10" style="transform: translate(30%, -30%);">
+                        <i class="bi bi-stopwatch display-4"></i>
+                    </div>
+                    <div class="position-relative">
+                        <div class="small fw-light text-white-75 mb-1">待审核的薪酬标准</div>
+                        <div class="display-5 fw-bold mb-2" th:text="${pendingStandardCount ?: 0}">2</div>
+                        <div class="small text-white-75">
+                            <i class="bi bi-hourglass-split me-1"></i>等待审核审批
+                        </div>
+                    </div>
+                </div>
+                <div class="card-footer bg-transparent border-top border-white border-opacity-20 py-3">
+                    <a class="text-white stretched-link text-decoration-none d-flex align-items-center justify-content-between fw-medium"
+                       onclick="loadContent('/salary/standard/list')">
+                        <span>查看待审核列表</span>
+                        <i class="bi bi-arrow-right-circle fs-5"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 核心业务流程区域 - 添加了图标和更好的视觉层次 -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex align-items-center mb-3">
+                <div class="bg-primary bg-opacity-10 p-2 rounded-circle me-3">
+                    <i class="bi bi-diagram-3 fs-4 text-primary"></i>
+                </div>
+                <h4 class="fw-bold mb-0">核心业务流程</h4>
+                <span class="badge bg-primary bg-opacity-10 text-primary ms-3 px-3 py-2">
+                    <i class="bi bi-lightning-charge me-1"></i>三步完成本月薪酬发放
+                </span>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4 mb-5">
         <div class="col-md-4">
-            <div class="card text-center shadow-sm h-100">
-                <div class="card-body d-flex flex-column justify-content-center">
-                    <h5 class="card-title">制定新标准</h5>
-                    <p class="card-text text-muted">为特定职位制定新的薪资构成方案。</p>
-                    <button onclick="loadContent('/salary/standard/new')" class="btn btn-primary mt-2">新建标准</button>
+            <div class="card h-100 shadow-lg border-0 overflow-hidden">
+                <div class="card-header bg-info bg-opacity-10 border-bottom-0 pb-0">
+                    <div class="d-flex align-items-center">
+                        <div class="bg-info bg-opacity-20 p-3 rounded-circle text-info me-3">
+                            <i class="bi bi-card-checklist fs-3"></i>
+                        </div>
+                        <h5 class="card-title mb-0 fw-bold text-dark">1. 薪酬标准管理</h5>
+                    </div>
+                </div>
+                <div class="card-body pt-4">
+                    <p class="card-text text-muted mb-4">
+                        管理各职位的定薪方案。在生成月度工资前，请确保所有职位的薪酬标准（FAT编号）已建立并通过审核。
+                    </p>
+                    <div class="mt-auto pt-3 border-top">
+                        <button onclick="loadContent('/salary/standard/list')"
+                                class="btn btn-outline-info w-100 mb-2">
+                            <i class="bi bi-gear me-2"></i>管理现有标准
+                        </button>
+                        <button onclick="loadContent('/salary/standard/new')"
+                                class="btn btn-link text-decoration-none w-100">
+                            <i class="bi bi-plus-circle me-2"></i>新建标准方案
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
 
         <div class="col-md-4">
-            <div class="card text-center shadow-sm h-100">
-                <div class="card-body d-flex flex-column justify-content-center">
-                    <h5 class="card-title">本月工资登记</h5>
-                    <p class="card-text text-muted">一键计算并生成本月全员暂定工资单。</p>
+            <div class="card h-100 shadow-lg border-0 overflow-hidden">
+                <div class="card-header bg-primary bg-opacity-10 border-bottom-0 pb-0">
+                    <div class="d-flex align-items-center">
+                        <div class="bg-primary bg-opacity-20 p-3 rounded-circle text-primary me-3">
+                            <i class="bi bi-calculator fs-3"></i>
+                        </div>
+                        <h5 class="card-title mb-0 fw-bold text-dark">2. 本月工资核算</h5>
+                    </div>
+                </div>
+                <div class="card-body pt-4">
+                    <p class="card-text text-muted mb-4">
+                        每月核心操作。输入本月标准工作天数，系统将自动关联考勤数据，生成全员暂定工资单草稿。
+                    </p>
+                    <div class="mt-auto pt-3 border-top">
+                        <button type="button"
+                                onclick="loadContent('/salary/register/pre-create')"
+                                class="btn btn-primary w-100 shadow-sm py-3">
+                            <i class="bi bi-play-circle me-2"></i>
+                            <span class="fw-bold">开始本月核算</span>
+                        </button>
+                        <div class="text-center mt-2">
+                            <small class="text-muted">
+                                <i class="bi bi-info-circle me-1"></i>建议每月28日时完成
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
 
-                    <button type="button"
-                            onclick="loadContent('/salary/register/pre-create')"
-                            class="btn btn-success mt-2">一键登记 (待确认)</button>
+        <div class="col-md-4">
+            <div class="card h-100 shadow-lg border-0 overflow-hidden">
+                <div class="card-header bg-success bg-opacity-10 border-bottom-0 pb-0">
+                    <div class="d-flex align-items-center">
+                        <div class="bg-success bg-opacity-20 p-3 rounded-circle text-success me-3">
+                            <i class="bi bi-send-check fs-3"></i>
+                        </div>
+                        <h5 class="card-title mb-0 fw-bold text-dark">3. 绩效录入与审核</h5>
+                    </div>
+                </div>
+                <div class="card-body pt-4">
+                    <p class="card-text text-muted mb-4">
+                        对生成的草稿录入KPI分数，确认无误后提交上级审核。可随时查看历史发放记录和审核状态。
+                    </p>
+                    <div class="mt-auto pt-3 border-top">
+                        <button onclick="loadContent('/salary/register/list')"
+                                class="btn btn-success w-100">
+                            <i class="bi bi-eye me-2"></i>查看发放记录
+                        </button>
+                        <div class="text-center mt-2">
+                            <small class="text-muted">
+                                <i class="bi bi-clock-history me-1"></i>处理草稿与撤回
+                            </small>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 </div>
+
+<!-- 添加一些内联样式用于特定的渐变效果 -->
+<style>
+    .bg-gradient-primary {
+        background: linear-gradient(135deg, #4361ee 0%, #3a56d4 100%) !important;
+    }
+
+    .bg-gradient-info {
+        background: linear-gradient(135deg, #3498db 0%, #2980b9 100%) !important;
+    }
+
+    .bg-gradient-warning {
+        background: linear-gradient(135deg, #f39c12 0%, #d68910 100%) !important;
+    }
+
+    .bg-gradient-danger {
+        background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%) !important;
+    }
+
+    .dashboard-card {
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    .dashboard-card:hover {
+        transform: translateY(-8px);
+        box-shadow: 0 12px 35px rgba(0, 0, 0, 0.15) !important;
+    }
+
+    .card-header.bg-gradient-primary {
+        background: linear-gradient(90deg, #4361ee 0%, #5d7aff 100%) !important;
+    }
+</style>

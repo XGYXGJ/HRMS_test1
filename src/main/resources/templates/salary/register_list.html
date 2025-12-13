@@ -9,7 +9,6 @@
     <div class="d-flex justify-content-between mb-3 align-items-center">
         <h3>薪资发放历史</h3>
 
-        <!-- 搜索表单 + 刷新按钮 -->
         <div class="d-flex align-items-center gap-2">
             <form class="d-flex" action="/salary/register/list" method="get">
                 <input type="search"
@@ -44,7 +43,6 @@
                 <tr th:each="reg : ${registers}">
                     <td th:text="${reg.registerCode}">PAY2025121101</td>
 
-                    <!-- 将日期格式化为“yyyy-MM”格式显示（若想只显示月份数字如“12月”，可改为 'MM' + '月'） -->
                     <td th:text="${#temporals.format(reg.payDate,'yyyy-MM')}">2025-12</td>
 
                     <td th:text="${reg.totalPeople}">10</td>
@@ -56,18 +54,23 @@
                         <span th:if="${reg.auditStatus == 'Rejected'}" class="badge bg-danger">已驳回</span>
                     </td>
                     <td>
-                        <!-- 草稿 & 驳回：进入可编辑草稿详情（可以录入KPI） -->
                         <button th:if="${reg.auditStatus == 'Draft' or reg.auditStatus == 'Rejected'}"
-                                th:onclick="'loadContent(\'/salary/register/draft-detail/' + ${reg.registerId} + '\')'"
+                                th:onclick="|loadContent('/salary/register/draft-detail/${reg.registerId}')|"
                                 class="btn btn-sm btn-warning">
-                            录入绩效 / 确认
+                            录入绩效
                         </button>
 
-                        <!-- 待审核 & 已发放：进入只读详情 -->
                         <button th:if="${reg.auditStatus == 'Pending' or reg.auditStatus == 'Approved'}"
-                                th:onclick="'loadContent(\'/salary/register/detail/' + ${reg.registerId} + '\')'"
+                                th:onclick="|loadContent('/salary/register/detail/${reg.registerId}')|"
                                 class="btn btn-sm btn-primary">
                             查看明细
+                        </button>
+
+                        <button th:if="${reg.auditStatus == 'Draft'}"
+                                th:data-id="${reg.registerId}"
+                                th:data-code="${reg.registerCode}"
+                                class="btn btn-sm btn-danger ms-2 btn-delete">
+                            删除
                         </button>
                     </td>
                 </tr>
@@ -76,9 +79,6 @@
         </div>
     </div>
 
-    <!-- =================== Modal + 自动弹窗（放在文件最底部） =================== -->
-
-    <!-- Bootstrap Modal 提示框 -->
     <div class="modal fade" id="toastModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
@@ -94,19 +94,6 @@
         </div>
     </div>
 
-    <!-- 自动弹窗脚本：error/msg 有值就弹 -->
-    <script th:inline="javascript">
-        /*<![CDATA[*/
-        const err = /*[[${error}]]*/ null;
-        const msg = /*[[${msg}]]*/ null;
-
-        const text = err || msg;
-        if (text) {
-            document.getElementById('toastBody').innerText = text;
-            document.getElementById('toastTitle').innerText = err ? "操作失败" : "操作成功";
-            const modal = new bootstrap.Modal(document.getElementById('toastModal'));
-            modal.show();
-        }
-        /*]]>*/
-    </script>
+    <form id="deleteForm" method="post" action="" style="display: none;">
+    </form>
 </div>

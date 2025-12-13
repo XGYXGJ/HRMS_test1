@@ -155,6 +155,9 @@
                 // 5. 重新绑定新内容中的 Form 提交事件
                 bindFormEvents();
 
+                // 6. 绑定删除按钮事件 <--- 新增
+                bindDeleteEvent();
+
                 // 在内容加载后立即绑定复选框事件
                 bindItemCheckboxEvents();
             })
@@ -236,6 +239,7 @@
                         // 递归绑定新内容中的表单事件 & Checkbox 事件
                         bindFormEvents();
                         bindItemCheckboxEvents();
+                        bindDeleteEvent();
                     })
                     .catch(err => {
                         alert("提交失败: " + err.message);
@@ -259,6 +263,56 @@
         });
     }
 
+    /**
+     * 绑定薪资发放列表中的删除按钮事件
+     * *** 关键修改：改为 AJAX 请求，完成后刷新内容区 ***
+     */
+    function bindDeleteEvent() {
+        document.querySelectorAll('.btn-delete').forEach(button => {
+            // 确保不会重复绑定
+            button.onclick = null;
+
+            button.addEventListener('click', function() {
+                const registerId = this.getAttribute('data-id');
+                const registerCode = this.getAttribute('data-code');
+
+                if (confirm(`确定要删除单号为【${registerCode}】的工资单草稿吗？\n删除后不可恢复！`)) {
+                    // 1. 显示加载中
+                    const contentArea = document.getElementById('content-area');
+                    const loading = document.getElementById('loading');
+                    loading.style.display = 'block';
+                    contentArea.style.opacity = '0.5';
+
+                    // 2. 发起 AJAX 请求 (POST)
+                    fetch(`/salary/register/delete/${registerId}`, {
+                        method: 'POST'
+                    })
+                        .then(response => {
+                            if (!response.ok) {
+                                // 尝试解析错误信息，如果后端返回了HTML，我们仍然需要处理
+                                return response.text().then(text => {
+                                    // 假设后端 /register/delete 失败时会返回一个 HTML 页面
+                                    // 暂时只抛出状态码错误
+                                    throw new Error(`网络请求失败，状态码: ${response.status}`);
+                                });
+                            }
+                            // 成功，继续解析文本，这个文本可能是重定向后的列表页HTML，也可能是一个空的响应
+                            return response.text();
+                        })
+                        .then(html => {
+                            // 3. 删除成功后，手动加载列表页内容
+                            loadContent('/salary/register/list', null);
+
+                        })
+                        .catch(err => {
+                            alert("删除失败: " + err.message);
+                            loading.style.display = 'none';
+                            contentArea.style.opacity = '1';
+                        });
+                }
+            });
+        });
+    }
 </script>
 
 <script th:inline="javascript">
@@ -283,5 +337,6 @@
     }
     /*]]>*/
 </script>
+
 </body>
 </html>
