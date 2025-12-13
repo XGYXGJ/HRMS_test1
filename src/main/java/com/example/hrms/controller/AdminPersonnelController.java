@@ -12,6 +12,7 @@ import com.example.hrms.mapper.UserMapper;
 import com.example.hrms.service.OrgService;
 import com.example.hrms.service.OrganizationService;
 import com.example.hrms.service.PersonnelService;
+import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.transaction.annotation.Transactional;
@@ -52,6 +53,7 @@ public class AdminPersonnelController {
                                Model model) {
         model.addAttribute("files", personnelService.listFiles(orgId, q));
         model.addAttribute("q", q);
+        model.addAttribute("orgId", orgId);
         return "admin/personnel_list";
     }
 
@@ -62,15 +64,15 @@ public class AdminPersonnelController {
     }
 
     @GetMapping("/restore/{id}")
-    public String restoreFile(@PathVariable Integer id, Model model) {
+    public String restoreFile(@PathVariable Integer id, Model model, HttpServletResponse response) {
         personnelService.restoreFile(id);
         model.addAttribute("success", "档案恢复成功！");
-        return listDeletedFiles(model); // Return the fragment
+        response.addHeader("X-Location", "/admin/deleted-list");
+        return listDeletedFiles(model);
     }
 
     @GetMapping("/personnel/new")
     public String newFilePage(Model model) {
-        // This is the same logic as in AdminController's newUserForm
         List<Organization> level3Orgs = organizationMapper.selectList(new QueryWrapper<Organization>().eq("level", 3));
         List<Map<String, Object>> orgsWithFullName = level3Orgs.stream()
                 .map(o -> {
@@ -81,7 +83,7 @@ public class AdminPersonnelController {
                 })
                 .collect(Collectors.toList());
         model.addAttribute("level3Orgs", orgsWithFullName);
-        model.addAttribute("file", new PersonnelFile()); // Add an empty file object
+        model.addAttribute("file", new PersonnelFile());
         return "admin/personnel_form";
     }
 
@@ -90,24 +92,23 @@ public class AdminPersonnelController {
     public String createFile(@RequestParam String role,
                              @ModelAttribute PersonnelFile file,
                              @RequestParam(required = false) Integer l3OrgId,
-                             Model model) {
+                             Model model, HttpServletResponse response) {
 
-        // This logic is adapted from AdminController's createUser method
         User user = new User();
         user.setUsername("temp_" + System.currentTimeMillis());
-        user.setPasswordHash("123"); // Default password
+        user.setPasswordHash("123");
 
         switch (role) {
             case "management":
-                user.setPositionId(2); // 2 is "管理部门"
-                user.setL3OrgId(1);     // Belongs to top-level org
+                user.setPositionId(2);
+                user.setL3OrgId(1);
                 break;
             case "hr":
-                user.setPositionId(3); // 3 is "人事经理"
+                user.setPositionId(3);
                 user.setL3OrgId(l3OrgId);
                 break;
             case "salary":
-                user.setPositionId(4); // 4 is "薪酬经理"
+                user.setPositionId(4);
                 user.setL3OrgId(l3OrgId);
                 break;
         }
@@ -120,15 +121,15 @@ public class AdminPersonnelController {
         userMapper.updateById(user);
 
         file.setUserId(uid);
-        file.setL3OrgId(user.getL3OrgId()); // Ensure file's orgId matches user's
+        file.setL3OrgId(user.getL3OrgId());
         file.setArchiveNo(account);
         file.setAuditStatus("Approved");
-        file.setHrSubmitterId(1); // Admin's ID
+        file.setHrSubmitterId(1);
 
         personnelFileMapper.insert(file);
 
-        // Instead of redirecting, forward to the list view with a success message
         model.addAttribute("success", "账号 " + account + " 创建成功，初始密码为 123");
+        response.addHeader("X-Location", "/admin/personnel/list");
         return listAllFiles(null, null, model);
     }
 
@@ -137,7 +138,8 @@ public class AdminPersonnelController {
     public String viewFile(@PathVariable Integer id, Model model) {
         PersonnelFile file = personnelFileMapper.selectById(id);
         if (file == null) {
-            return "redirect:/admin/personnel/list?error_notfound";
+            model.addAttribute("error", "档案未找到");
+            return listAllFiles(null, null, model);
         }
 
         String orgName = organizationService.getFullOrgName(file.getL3OrgId());
@@ -163,7 +165,6 @@ public class AdminPersonnelController {
         User user = userMapper.selectOne(new QueryWrapper<User>().eq("User_ID", file.getUserId()));
         if (user != null) {
             model.addAttribute("currentPositionId", user.getPositionId());
-            // Provide all positions for potential changes, maybe grouped by org later
             model.addAttribute("positions", positionMapper.selectList(null));
         }
 
@@ -171,7 +172,8 @@ public class AdminPersonnelController {
     }
 
     @PostMapping("/personnel/edit/{id}")
-    public String updateFile(@PathVariable Integer id, @ModelAttribute PersonnelFile file, @RequestParam(required = false) Integer positionId) {
+    public String updateFile(@PathVariable Integer id, @ModelAttribute PersonnelFile file, @RequestParam(required = false) Integer positionId, Model model, HttpServletResponse response) {
+        // 1. Save the data
         file.setFileId(id);
         personnelFileMapper.updateById(file);
 
@@ -184,13 +186,18 @@ public class AdminPersonnelController {
             }
         }
 
-        return "redirect:/admin/personnel/list";
+        // 2. Add success message to the model
+        model.addAttribute("success", "档案更新成功！");
+
+        // 3. Reload the data for the edit page and return the same view
+        return editFilePage(id, model);
     }
     
     @GetMapping("/personnel/delete/{id}")
-    public String deleteFile(@PathVariable Integer id, Model model) {
+    public String deleteFile(@PathVariable Integer id, Model model, HttpServletResponse response) {
         personnelService.deleteFile(id, "Deleted by admin");
         model.addAttribute("success", "档案删除成功！");
-        return listAllFiles(null, null, model); // Return the fragment
+        response.addHeader("X-Location", "/admin/personnel/list");
+        return listAllFiles(null, null, model);
     }
 }

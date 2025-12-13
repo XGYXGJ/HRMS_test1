@@ -4,8 +4,8 @@
             <h5 class="mb-0 text-primary">
                 <i class="bi bi-pencil-square me-2"></i>编辑档案 (管理员)
             </h5>
-            <a th:onclick="'loadContent(\'/admin/personnel/view/' + ${file.fileId} + '\', this)'" class="btn btn-secondary btn-sm">
-                <i class="bi bi-arrow-left me-1"></i>返回详情
+            <a href="javascript:history.back()" class="btn btn-secondary btn-sm">
+                <i class="bi bi-arrow-left me-1"></i>返回
             </a>
         </div>
         <div class="card-body">
@@ -31,7 +31,7 @@
 
                 <hr class="my-4">
                 <h5 class="mb-3 text-primary"><i class="bi bi-briefcase me-2"></i>职位信息</h5>
-                <div class="alert alert-info">出于安全考虑，管理员仅可在此处调整员工职位，如需调动部门，请走正式的“人员调动”流程（开发中）。</div>
+                <div class="alert alert-info">管理员仅可在此处调整员工职位，如需调动部门，请告知管理部门走部门调动渠道。</div>
 
                 <div class="mb-3">
                     <label for="positionId" class="form-label">职位</label>

@@ -78,9 +78,18 @@
 </div>
 
 <script>
+    // Handle browser back/forward buttons
+    window.onpopstate = function(event) {
+        if (event.state && event.state.url) {
+            loadContent(event.state.url, null, false); // false to prevent pushing a new state
+        }
+    };
+
     // 初始化：默认加载仪表盘首页
     document.addEventListener('DOMContentLoaded', function() {
-        loadContent('/admin/dashboard/home', document.querySelector('#sidebarMenu a.active'));
+        const initialUrl = '/admin/dashboard/home';
+        history.replaceState({url: initialUrl}, '', '#' + initialUrl);
+        loadContent(initialUrl, document.querySelector('#sidebarMenu a.active'), false);
     });
 
     function executeScripts(container) {
@@ -97,10 +106,16 @@
         });
     }
 
-    function loadContent(url, element) {
+    function loadContent(url, element, pushState = true) {
+        // Update sidebar active state
         if (element && element.classList.contains('list-group-item')) {
             document.querySelectorAll('#sidebarMenu .list-group-item').forEach(item => item.classList.remove('active'));
             element.classList.add('active');
+        }
+
+        // Push state to browser history
+        if (pushState) {
+            history.pushState({url: url}, '', '#' + url);
         }
 
         const contentArea = document.getElementById('content-area');
@@ -170,6 +185,13 @@
                 fetch(requestUrl, fetchOptions)
                     .then(response => {
                         if (!response.ok) throw new Error("网络请求失败");
+
+                        // Check for custom header to update URL
+                        const newUrl = response.headers.get('X-Location');
+                        if (newUrl) {
+                            history.pushState({url: newUrl}, '', '#' + newUrl);
+                        }
+
                         return response.text();
                     })
                     .then(html => {
