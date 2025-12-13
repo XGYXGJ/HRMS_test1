@@ -30,7 +30,9 @@
                 <td th:text="${#temporals.format(reg.registerTime, 'yyyy-MM-dd HH:mm')}"></td>
 
                 <td>
-                    <span class="badge bg-warning" th:text="${reg.auditStatus}">Pending</span>
+                    <span th:if="${reg.auditStatus == 'Pending'}" class="badge bg-warning text-dark">待审核</span>
+                    <span th:if="${reg.auditStatus == 'Approved'}" class="badge bg-success">已通过</span>
+                    <span th:if="${reg.auditStatus == 'Rejected'}" class="badge bg-danger">已驳回</span>
                 </td>
                 <td>
                     <button class="btn btn-sm btn-outline-primary"

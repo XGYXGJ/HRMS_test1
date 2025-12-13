@@ -354,4 +354,110 @@ public class ManagementController {
             return empDetail;
         }).collect(Collectors.toList());
     }
+
+    // =========================================
+    // 新增：薪酬标准审核历史 (查询 + 列表)
+    // =========================================
+    @GetMapping("/audit/standard/history")
+    public String standardAuditHistory(Model model,
+                                       @RequestParam(value = "standardCode", required = false) String standardCode,
+                                       @RequestParam(value = "positionName", required = false) String positionName) {
+
+        // 1. 构建查询条件：查所有 Approved 或 Rejected 的记录
+        QueryWrapper<SalaryStandardMaster> query = new QueryWrapper<>();
+        query.in("Audit_Status", Arrays.asList("Approved", "Rejected"));
+        query.orderByDesc("Audit_Time"); // 按审核时间倒序
+
+        // 2. 模糊查询逻辑 (复用 SalaryMgrController 的逻辑)
+        if (standardCode != null && !standardCode.trim().isEmpty()) {
+            query.like("Standard_Code", standardCode.trim());
+        }
+
+        if (positionName != null && !positionName.trim().isEmpty()) {
+            List<Position> matchedPositions = positionMapper.selectList(
+                    new QueryWrapper<Position>().like("Position_Name", positionName.trim())
+            );
+            if (matchedPositions.isEmpty()) {
+                query.eq("Standard_ID", -1); // 查无此人
+            } else {
+                List<Integer> pIds = matchedPositions.stream().map(Position::getPositionId).collect(Collectors.toList());
+                query.in("Position_ID", pIds);
+            }
+        }
+
+        List<SalaryStandardMaster> historyList = standardMasterMapper.selectList(query);
+
+        // 3. 准备展示数据 (职位名、机构名、提交人、审核人)
+        // A. 职位名
+        Set<Integer> pIds = historyList.stream().map(SalaryStandardMaster::getPositionId).filter(Objects::nonNull).collect(Collectors.toSet());
+        Map<Integer, String> posMap = pIds.isEmpty() ? new HashMap<>() :
+                positionMapper.selectBatchIds(pIds).stream().collect(Collectors.toMap(Position::getPositionId, Position::getPositionName));
+
+        // B. 机构名
+        Set<Integer> orgIds = historyList.stream().map(SalaryStandardMaster::getL3OrgId).filter(Objects::nonNull).collect(Collectors.toSet());
+        Map<Integer, String> orgMap = orgIds.isEmpty() ? new HashMap<>() :
+                organizationMapper.selectBatchIds(orgIds).stream().collect(Collectors.toMap(Organization::getOrgId, Organization::getOrgName));
+
+        // C. 用户名 (提交人 + 审核人)
+        Set<Integer> userIds = new HashSet<>();
+        historyList.forEach(h -> {
+            if(h.getSubmitterId() != null) userIds.add(h.getSubmitterId());
+            if(h.getAuditorId() != null) userIds.add(h.getAuditorId());
+        });
+        Map<Integer, String> userMap = userIds.isEmpty() ? new HashMap<>() :
+                userMapper.selectBatchIds(userIds).stream().collect(Collectors.toMap(User::getUserId, User::getUsername));
+
+        model.addAttribute("standards", historyList);
+        model.addAttribute("posMap", posMap);
+        model.addAttribute("orgMap", orgMap);
+        model.addAttribute("userMap", userMap);
+
+        // 回显查询参数
+        model.addAttribute("standardCode", standardCode);
+        model.addAttribute("positionName", positionName);
+
+        return "manage/audit_history_standard";
+    }
+
+    // =========================================
+    // 新增：工资单审核历史 (查询 + 列表)
+    // =========================================
+    @GetMapping("/audit/register/history")
+    public String registerAuditHistory(Model model,
+                                       @RequestParam(value = "registerCode", required = false) String registerCode) {
+
+        // 1. 构建查询条件：查所有 Approved 或 Rejected 的记录
+        QueryWrapper<SalaryRegisterMaster> query = new QueryWrapper<>();
+        query.in("Audit_Status", Arrays.asList("Approved", "Rejected"));
+        query.orderByDesc("Audit_Time");
+
+        // 2. 模糊查询
+        if (registerCode != null && !registerCode.trim().isEmpty()) {
+            query.like("Register_Code", registerCode.trim());
+        }
+
+        List<SalaryRegisterMaster> historyList = registerMasterMapper.selectList(query);
+
+        // 3. 准备展示数据
+        // A. 机构名
+        Set<Integer> orgIds = historyList.stream().map(SalaryRegisterMaster::getL3OrgId).filter(Objects::nonNull).collect(Collectors.toSet());
+        Map<Integer, String> orgMap = orgIds.isEmpty() ? new HashMap<>() :
+                organizationMapper.selectBatchIds(orgIds).stream().collect(Collectors.toMap(Organization::getOrgId, Organization::getOrgName));
+
+        // B. 用户名 (提交人 + 审核人)
+        Set<Integer> userIds = new HashSet<>();
+        historyList.forEach(h -> {
+            if(h.getSubmitterId() != null) userIds.add(h.getSubmitterId());
+            if(h.getAuditorId() != null) userIds.add(h.getAuditorId());
+        });
+        Map<Integer, String> userMap = userIds.isEmpty() ? new HashMap<>() :
+                userMapper.selectBatchIds(userIds).stream().collect(Collectors.toMap(User::getUserId, User::getUsername));
+
+        model.addAttribute("registers", historyList);
+        model.addAttribute("orgMap", orgMap);
+        model.addAttribute("userMap", userMap);
+        model.addAttribute("registerCode", registerCode);
+
+        return "manage/audit_history_register";
+    }
 }

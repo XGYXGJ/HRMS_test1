@@ -1,0 +1,83 @@
+<div class="container-fluid">
+    <h4 class="mb-3">薪酬标准审核历史</h4>
+
+    <div class="card shadow-sm mb-3">
+        <div class="card-body py-3">
+            <form action="/manage/audit/standard/history" method="get" onsubmit="handleHistorySubmit(event)">
+                <div class="row g-3 align-items-end">
+                    <div class="col-md-3">
+                        <label class="form-label small">标准编号</label>
+                        <input type="text" name="standardCode" class="form-control form-control-sm"
+                               placeholder="支持模糊搜索" th:value="${standardCode}">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label small">职位名称</label>
+                        <input type="text" name="positionName" class="form-control form-control-sm"
+                               placeholder="例如: 软件工程师" th:value="${positionName}">
+                    </div>
+                    <div class="col-md-4">
+                        <button type="submit" class="btn btn-primary btn-sm me-2">查询</button>
+                        <button type="button" onclick="loadContent('/manage/audit/standard/history')" class="btn btn-secondary btn-sm">重置</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                    <tr>
+                        <th>标准编号</th>
+                        <th>标准名称</th>
+                        <th>所在机构</th>
+                        <th>适用职位</th>
+                        <th>提交人</th>
+                        <th>审核人</th>
+                        <th>审核时间</th>
+                        <th>状态</th>
+                        <th>操作</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="std : ${standards}">
+                        <td th:text="${std.standardCode}">FAT2023...</td>
+                        <td th:text="${std.standardName}">...</td>
+                        <td th:text="${orgMap.get(std.l3OrgId)}">研发部</td>
+                        <td th:text="${posMap.get(std.positionId)}">工程师</td>
+                        <td th:text="${userMap.get(std.submitterId)}">张三</td>
+                        <td th:text="${userMap.get(std.auditorId)}">管理员</td>
+                        <td th:text="${#temporals.format(std.auditTime, 'yyyy-MM-dd HH:mm')}">2023-10-01</td>
+                        <td>
+                            <span th:if="${std.auditStatus == 'Approved'}" class="badge bg-success">已通过</span>
+                            <span th:if="${std.auditStatus == 'Rejected'}" class="badge bg-danger">已驳回</span>
+                            <span th:if="${std.auditStatus == 'Pending'}" class="badge bg-warning text-dark">待审核</span>
+                        </td>
+                        <td>
+                            <button class="btn btn-sm btn-outline-primary"
+                                    th:onclick="|loadContent('/manage/audit/detail/${std.standardId}?type=Standard')|">
+                                详情
+                            </button>
+                        </td>
+                    </tr>
+                    <tr th:if="${#lists.isEmpty(standards)}">
+                        <td colspan="9" class="text-center text-muted py-4">暂无历史审核记录</td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function handleHistorySubmit(event) {
+            event.preventDefault();
+            const form = event.target;
+            const formData = new FormData(form);
+            const queryParams = new URLSearchParams(formData).toString();
+            loadContent(form.action + '?' + queryParams);
+        }
+    </script>
+</div>

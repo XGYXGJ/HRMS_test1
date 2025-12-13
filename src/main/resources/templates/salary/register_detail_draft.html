@@ -38,7 +38,11 @@
         <span th:text="${master.registerCode}">PAY2025121101</span> |
         <strong>月份:</strong> <span th:text="${#temporals.format(master.payDate,'yyyy年MM月')}"></span> |
         <strong>标准工作天数:</strong> <span th:text="${master.standardWorkDays}"></span> |
-        <strong>审核状态:</strong> <span class="badge bg-warning text-dark">待确认/待审核</span>
+        <strong>审核状态:</strong>
+        <span th:if="${master.auditStatus == 'Draft'}" class="badge bg-secondary">草稿</span>
+        <span th:if="${master.auditStatus == 'Pending'}" class="badge bg-warning text-dark">待审核</span>
+        <span th:if="${master.auditStatus == 'Approved'}" class="badge bg-success">已通过</span>
+        <span th:if="${master.auditStatus == 'Rejected'}" class="badge bg-danger">已驳回</span>
         <br>
         <strong>总人数:</strong> <span th:text="${master.totalPeople}"></span> 人 |
         <strong>总金额:</strong>
