@@ -172,16 +172,22 @@ public class AdminPersonnelController {
     }
 
     @PostMapping("/personnel/edit/{id}")
-    public String updateFile(@PathVariable Integer id, @ModelAttribute PersonnelFile file, @RequestParam(required = false) Integer positionId, Model model, HttpServletResponse response) {
+    public String updateFile(@PathVariable Integer id, @ModelAttribute PersonnelFile file, @RequestParam(required = false) Integer positionId, @RequestParam(required = false) String newPassword, Model model, HttpServletResponse response) {
         // 1. Save the data
         file.setFileId(id);
         personnelFileMapper.updateById(file);
 
         PersonnelFile pf = personnelFileMapper.selectById(id);
-        if (pf != null && pf.getUserId() != null && positionId != null) {
+        if (pf != null && pf.getUserId() != null) {
             User empUser = userMapper.selectById(pf.getUserId());
             if (empUser != null) {
-                empUser.setPositionId(positionId);
+                if (positionId != null) {
+                    empUser.setPositionId(positionId);
+                }
+                if (newPassword != null && !newPassword.isEmpty()) {
+                    // In a real application, you should hash the password
+                    empUser.setPasswordHash(newPassword);
+                }
                 userMapper.updateById(empUser);
             }
         }

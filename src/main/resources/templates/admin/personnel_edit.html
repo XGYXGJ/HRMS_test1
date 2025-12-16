@@ -30,8 +30,11 @@
                 <div class="mb-3"><label>地址</label><input name="address" class="form-control" th:value="${file.address}"/></div>
 
                 <hr class="my-4">
-                <h5 class="mb-3 text-primary"><i class="bi bi-briefcase me-2"></i>职位信息</h5>
-                <div class="alert alert-info">管理员仅可在此处调整员工职位，如需调动部门，请告知管理部门走部门调动渠道。</div>
+                <h5 class="mb-3 text-primary"><i class="bi bi-key me-2"></i>修改密码</h5>
+                <div class="mb-3">
+                    <label for="newPassword" class="form-label">新密码</label>
+                    <input type="password" id="newPassword" name="newPassword" class="form-control" placeholder="留空则不修改">
+                </div>
 
                 <div class="mb-3">
                     <label for="positionId" class="form-label">职位</label>
