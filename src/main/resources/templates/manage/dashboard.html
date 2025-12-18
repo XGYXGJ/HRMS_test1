@@ -220,6 +220,63 @@
                 alert('操作出错');
             });
     }
+
+    function showStandardModal() {
+        // 1. 获取弹窗元素
+        const modalEl = document.getElementById('salaryStandardModal');
+        const modal = new bootstrap.Modal(modalEl);
+
+        // 显示弹窗
+        modal.show();
+
+        // 2. 初始化界面状态 (显示加载中，隐藏表格和错误)
+        document.getElementById('modalLoading').classList.remove('d-none');
+        document.getElementById('modalTable').classList.add('d-none');
+        document.getElementById('modalError').classList.add('d-none');
+        document.getElementById('modalStandardCode').innerText = "";
+        document.getElementById('modalTableBody').innerHTML = "";
+
+        // 3. 发送 AJAX 请求
+        fetch('/emp/api/standard')
+            .then(response => response.json())
+            .then(data => {
+                // 隐藏加载动画
+                document.getElementById('modalLoading').classList.add('d-none');
+
+                if (data.success) {
+                    // --- 成功：渲染表格 ---
+                    document.getElementById('modalTable').classList.remove('d-none');
+                    document.getElementById('modalStandardCode').innerText = "(" + data.standardCode + ")";
+
+                    const tbody = document.getElementById('modalTableBody');
+                    let html = "";
+
+                    // 遍历数据生成表格行
+                    data.data.forEach(item => {
+                        html += `
+                            <tr>
+                                <td>${item.name}</td>
+                                <td class="fw-bold">${item.value}</td>
+                            </tr>
+                        `;
+                    });
+
+                    tbody.innerHTML = html;
+                } else {
+                    // --- 失败：显示错误信息 ---
+                    const errorDiv = document.getElementById('modalError');
+                    errorDiv.classList.remove('d-none');
+                    errorDiv.innerText = data.msg || "无法获取数据";
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                document.getElementById('modalLoading').classList.add('d-none');
+                const errorDiv = document.getElementById('modalError');
+                errorDiv.classList.remove('d-none');
+                errorDiv.innerText = "系统错误，请稍后重试";
+            });
+    }
 </script>
 
 </body>

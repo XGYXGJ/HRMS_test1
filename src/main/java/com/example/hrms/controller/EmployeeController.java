@@ -1,22 +1,8 @@
 package com.example.hrms.controller;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
-import com.example.hrms.entity.AttendanceRecord;
-import com.example.hrms.entity.Organization;
-import com.example.hrms.entity.PersonnelFile;
-import com.example.hrms.entity.SalaryItem;
-import com.example.hrms.mapper.OrganizationMapper;
-import com.example.hrms.mapper.SalaryItemMapper;
-import com.example.hrms.entity.Position;
-import com.example.hrms.entity.SalaryRegisterDetail;
-import com.example.hrms.entity.SalaryRegisterMaster;
-import com.example.hrms.entity.User;
-import com.example.hrms.mapper.AttendanceRecordMapper;
-import com.example.hrms.mapper.PersonnelFileMapper;
-import com.example.hrms.mapper.PositionMapper;
-import com.example.hrms.mapper.SalaryRegisterDetailMapper;
-import com.example.hrms.mapper.SalaryRegisterMasterMapper;
-import com.example.hrms.mapper.UserMapper;
+import com.example.hrms.entity.*;
+import com.example.hrms.mapper.*;
 import jakarta.servlet.http.HttpSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -50,6 +36,8 @@ public class EmployeeController {
     @Autowired private SalaryItemMapper salaryItemMapper;
     @Autowired private UserMapper userMapper;
     @Autowired private OrganizationMapper organizationMapper;
+    @Autowired private SalaryStandardMasterMapper standardMasterMapper;
+    @Autowired private SalaryStandardDetailMapper standardDetailMapper;
 
     @GetMapping("/dashboard")
     public String dashboard(HttpSession session) {
@@ -329,5 +317,65 @@ public class EmployeeController {
         model.addAttribute("selectedMonth", month);
 
         return "emp/emp_salary";
+    }
+
+    /**
+     * API: 获取当前员工的最新薪酬标准详情 (返回JSON)
+     */
+    @GetMapping("/api/standard")
+    @ResponseBody // 关键注解：表示返回数据而不是页面
+    public Map<String, Object> getMyStandardApi(HttpSession session) {
+        Map<String, Object> result = new HashMap<>();
+
+        User user = (User) session.getAttribute("user");
+        if (user == null) {
+            result.put("success", false);
+            result.put("msg", "登录已失效");
+            return result;
+        }
+
+        // 1. 查询 Master (逻辑同之前：机构+职位+Approved+最新)
+        SalaryStandardMaster master = standardMasterMapper.selectOne(
+                new QueryWrapper<com.example.hrms.entity.SalaryStandardMaster>()
+                        .eq("L3_Org_ID", user.getL3OrgId())
+                        .eq("Position_ID", user.getPositionId())
+                        .eq("Audit_Status", "Approved")
+                        .orderByDesc("Submission_Time")
+                        .last("LIMIT 1")
+        );
+
+        if (master == null) {
+            result.put("success", false);
+            result.put("msg", "未找到生效的薪酬标准");
+            return result;
+        }
+
+        // 2. 查询明细
+        List<com.example.hrms.entity.SalaryStandardDetail> details = standardDetailMapper.selectList(
+                new QueryWrapper<com.example.hrms.entity.SalaryStandardDetail>()
+                        .eq("Standard_ID", master.getStandardId())
+        );
+
+        // 3. 获取所有项目名称映射 (ID -> Name)
+        Map<Integer, String> itemMap = salaryItemMapper.selectList(null).stream()
+                .collect(Collectors.toMap(
+                        com.example.hrms.entity.SalaryItem::getItemId,
+                        com.example.hrms.entity.SalaryItem::getItemName
+                ));
+
+        // 4. 组装前端友好的数据列表 (包含：项目名、金额)
+        List<Map<String, Object>> displayList = new ArrayList<>();
+        for (com.example.hrms.entity.SalaryStandardDetail detail : details) {
+            Map<String, Object> item = new HashMap<>();
+            item.put("name", itemMap.getOrDefault(detail.getItemId(), "未知项目"));
+            item.put("value", detail.getValue());
+            displayList.add(item);
+        }
+
+        result.put("success", true);
+        result.put("standardCode", master.getStandardCode()); // 标准编号
+        result.put("data", displayList); // 具体明细
+
+        return result;
     }
 }
