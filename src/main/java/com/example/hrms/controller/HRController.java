@@ -72,6 +72,19 @@ public class HRController {
                                   @RequestParam Integer positionId,
                                   HttpSession session, Model model) {
         User currentUser = (User) session.getAttribute("user");
+
+        // Validation
+        if (file.getIdNumber() != null && !file.getIdNumber().isEmpty() && file.getIdNumber().length() != 18) {
+            model.addAttribute("error", "身份证号必须为18位");
+            model.addAttribute("positions", positionMapper.selectList(new QueryWrapper<Position>().eq("L3_Org_ID", currentUser.getL3OrgId())));
+            return "hr/personnel_form";
+        }
+        if (file.getPhoneNumber() != null && !file.getPhoneNumber().isEmpty() && file.getPhoneNumber().length() != 11) {
+            model.addAttribute("error", "手机号必须为11位");
+            model.addAttribute("positions", positionMapper.selectList(new QueryWrapper<Position>().eq("L3_Org_ID", currentUser.getL3OrgId())));
+            return "hr/personnel_form";
+        }
+
         file.setL3OrgId(currentUser.getL3OrgId());
         file.setAuditStatus("Pending");
         file.setHrSubmitterId(currentUser.getUserId());

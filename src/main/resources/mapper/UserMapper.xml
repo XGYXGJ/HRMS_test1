@@ -56,7 +56,7 @@
         LEFT JOIN
             T_Position p ON u.Position_ID = p.Position_ID
         WHERE
-            u.L3_Org_ID = #{orgId}
+            u.L3_Org_ID = #{orgId} AND (pf.Is_Deleted IS NULL OR pf.Is_Deleted = 0)
     </select>
 
     <select id="searchUsersByNameAndPosition" resultType="com.example.hrms.dto.UserDTO">

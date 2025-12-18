@@ -80,46 +80,6 @@
 </div>
 
 <script>
-    (function() {
-        const idInput = document.getElementById('idNumber');
-        const phoneInput = document.getElementById('phoneNumber');
-        const idMsg = document.getElementById('idNumber-msg');
-        const phoneMsg = document.getElementById('phoneNumber-msg');
-
-        const idTargetLength = 18;
-        const phoneTargetLength = 11;
-
-        function updateMessage(input, msgElement, targetLength) {
-            const currentLength = input.value.length;
-            const remaining = targetLength - currentLength;
-
-            if (currentLength === 0) {
-                msgElement.textContent = `请输入 ${targetLength} 位。`;
-                msgElement.className = 'form-text text-muted';
-            } else if (remaining > 0) {
-                msgElement.textContent = `还差 ${remaining} 位。`;
-                msgElement.className = 'form-text text-warning';
-            } else if (remaining === 0) {
-                msgElement.textContent = '位数正确。';
-                msgElement.className = 'form-text text-success';
-            } else {
-                msgElement.textContent = `超出了 ${-remaining} 位。`;
-                msgElement.className = 'form-text text-danger';
-            }
-        }
-
-        idInput.addEventListener('input', () => updateMessage(idInput, idMsg, idTargetLength));
-        phoneInput.addEventListener('input', () => updateMessage(phoneInput, phoneMsg, phoneTargetLength));
-
-        // Initial check on page load
-        document.addEventListener('DOMContentLoaded', function() {
-            updateMessage(idInput, idMsg, idTargetLength);
-            updateMessage(phoneInput, phoneMsg, phoneTargetLength);
-        });
-    })();
-</script>
-
-<script>
     'use strict';
     (function() {
         function toggleOrgField() {
@@ -157,5 +117,45 @@
         document.addEventListener('DOMContentLoaded', function() {
             toggleOrgField();
         });
+    })();
+</script>
+<script>
+    (function() {
+        const idInput = document.getElementById('idNumber');
+        const phoneInput = document.getElementById('phoneNumber');
+        const idMsg = document.getElementById('idNumber-msg');
+        const phoneMsg = document.getElementById('phoneNumber-msg');
+
+        const idTargetLength = 18;
+        const phoneTargetLength = 11;
+
+        function updateMessage(input, msgElement, targetLength) {
+            if (!input || !msgElement) return;
+            const currentLength = input.value.length;
+            const remaining = targetLength - currentLength;
+
+            if (currentLength === 0) {
+                msgElement.textContent = '';
+                msgElement.className = 'form-text text-muted';
+            } else if (remaining > 0) {
+                msgElement.textContent = `还差 ${remaining} 位。`;
+                msgElement.className = 'form-text text-warning';
+            } else if (remaining === 0) {
+                msgElement.textContent = '位数正确。';
+                msgElement.className = 'form-text text-success';
+            } else {
+                msgElement.textContent = `超出了 ${-remaining} 位。`;
+                msgElement.className = 'form-text text-danger';
+            }
+        }
+
+        if(idInput) {
+            idInput.addEventListener('input', () => updateMessage(idInput, idMsg, idTargetLength));
+            updateMessage(idInput, idMsg, idTargetLength);
+        }
+        if(phoneInput) {
+            phoneInput.addEventListener('input', () => updateMessage(phoneInput, phoneMsg, phoneTargetLength));
+            updateMessage(phoneInput, phoneMsg, phoneTargetLength);
+        }
     })();
 </script>

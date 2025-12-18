@@ -94,6 +94,16 @@ public class AdminPersonnelController {
                              @RequestParam(required = false) Integer l3OrgId,
                              Model model, HttpServletResponse response) {
 
+        // Validation
+        if (file.getIdNumber() != null && !file.getIdNumber().isEmpty() && file.getIdNumber().length() != 18) {
+            model.addAttribute("error", "身份证号必须为18位");
+            return newFilePage(model); // Reload form with error
+        }
+        if (file.getPhoneNumber() != null && !file.getPhoneNumber().isEmpty() && file.getPhoneNumber().length() != 11) {
+            model.addAttribute("error", "手机号必须为11位");
+            return newFilePage(model); // Reload form with error
+        }
+
         User user = new User();
         user.setUsername("temp_" + System.currentTimeMillis());
         user.setPasswordHash("123");

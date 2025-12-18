@@ -12,14 +12,15 @@
             (SELECT GROUP_CONCAT(pf.Name SEPARATOR ', ')
              FROM T_User u
              JOIN T_Personnel_File pf ON u.User_ID = pf.User_ID
-             WHERE u.L3_Org_ID = o.Org_ID AND u.Position_ID = 3) AS hrManagerName,
+             WHERE u.L3_Org_ID = o.Org_ID AND u.Position_ID = 3 AND (u.Is_Deleted IS NULL OR u.Is_Deleted = 0) AND (pf.Is_Deleted IS NULL OR pf.Is_Deleted = 0)) AS hrManagerName,
             (SELECT GROUP_CONCAT(pf.Name SEPARATOR ', ')
              FROM T_User u
              JOIN T_Personnel_File pf ON u.User_ID = pf.User_ID
-             WHERE u.L3_Org_ID = o.Org_ID AND u.Position_ID = 4) AS salaryManagerName,
+             WHERE u.L3_Org_ID = o.Org_ID AND u.Position_ID = 4 AND (u.Is_Deleted IS NULL OR u.Is_Deleted = 0) AND (pf.Is_Deleted IS NULL OR pf.Is_Deleted = 0)) AS salaryManagerName,
             (SELECT COUNT(*)
              FROM T_User u
-             WHERE u.L3_Org_ID = o.Org_ID AND u.Position_ID NOT IN (3, 4)) AS employeeCount
+             JOIN T_Personnel_File pf ON u.User_ID = pf.User_ID
+             WHERE u.L3_Org_ID = o.Org_ID AND u.Position_ID NOT IN (3, 4) AND (u.Is_Deleted IS NULL OR u.Is_Deleted = 0) AND (pf.Is_Deleted IS NULL OR pf.Is_Deleted = 0)) AS employeeCount
         FROM
             T_Organization o
         WHERE o.level = 3

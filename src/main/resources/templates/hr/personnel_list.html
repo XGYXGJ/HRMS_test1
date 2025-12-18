@@ -24,8 +24,8 @@
                 </div>
             </form>
 
-            <div th:if="${param.msg}" class="alert alert-success alert-dismissible fade show" role="alert">
-                [[${param.msg}]]
+            <div th:if="${param.msg == 'success_create'}" class="alert alert-success alert-dismissible fade show" role="alert">
+                档案创建成功！
                 <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
             </div>
 
